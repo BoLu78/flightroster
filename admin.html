@@ -407,8 +407,8 @@ function parseNeosRoster(text) {
   if (remM) remaining = remM[1];
   const targetMonth = mMatch ? parseInt(mMatch[2], 10) : 3; // default March
 
-  const chunks = text.split(/(?=\b\d{2}\/\d{2}\/\d{4}\b)/);
-  console.log('targetMonth:', targetMonth, 'chunks:', chunks.length);
+  // Only split at dates followed by day abbreviation (su/mo/tu/we/th/fr/sa)
+  const chunks = text.split(/(?=\b\d{2}\/\d{2}\/\d{4}\s+(?:su|mo|tu|we|th|fr|sa)\b)/);
 
   // First pass: collect all raw chunks per day
   const rawChunks = {};
