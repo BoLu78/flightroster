@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Roster">
+<meta name="theme-color" content="#0a0d14">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>FlightRoster</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0d14;
+    --surface: #111520;
+    --surface2: #161c2e;
+    --border: #1e2740;
+    --accent: #3d7fff;
+    --accent2: #00d4aa;
+    --warn: #ff8c42;
+    --off: #1e2a1e;
+    --off-text: #4caf50;
+    --text: #e8eaf0;
+    --muted: #6b7a9e;
+    --layover: #1a2a4a;
+    --dh: #1a3a2a;
+    --safe-top: env(safe-area-inset-top);
+    --safe-bottom: env(safe-area-inset-bottom);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    padding-bottom: calc(80px + var(--safe-bottom));
+    overscroll-behavior: none;
+  }
+
+  /* TOP BAR */
+  .topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: calc(16px + var(--safe-top)) 20px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+
+  .topbar-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .topbar h1 {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+  }
+
+  .topbar .month {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* STATS ROW */
+  .stats-row {
+    display: flex;
+    gap: 8px;
+    padding: 16px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .stats-row::-webkit-scrollbar { display: none; }
+
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 16px;
+    min-width: 80px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .stat .sv {
+    font-family: 'Space Mono', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .stat .sv.green { color: var(--accent2); }
+  .stat .sv.orange { color: var(--warn); }
+
+  .stat .sk {
+    font-size: 9px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    padding: 0 16px;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .tab {
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .tab.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+
+  /* VIEWS */
+  .view { display: none; padding: 0 16px; }
+  .view.active { display: block; }
+
+  /* CALENDAR VIEW */
+  .cal-header-row {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+    margin-bottom: 3px;
+  }
+
+  .cal-header-row div {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    text-align: center;
+    padding: 4px 0;
+  }
+
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+  }
+
+  .cday {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 4px;
+    min-height: 70px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cday:active { opacity: 0.7; }
+  .cday.empty { background: transparent; border-color: transparent; cursor: default; }
+  .cday.is-off { background: var(--off); border-color: #2a4030; }
+  .cday.is-layover { background: var(--layover); border-color: #2a4080; }
+  .cday.is-dh { background: var(--dh); border-color: #1a4030; }
+  .cday.is-today { border-color: var(--accent) !important; border-width: 2px; }
+
+  .cday-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    margin-bottom: 3px;
+  }
+
+  .cday-route {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.3;
+  }
+
+  .cday-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+  }
+
+  .dot-flight { background: var(--accent); }
+  .dot-off { background: var(--off-text); }
+  .dot-layover { background: #6090ff; }
+  .dot-dh { background: var(--accent2); }
+
+  /* LIST VIEW */
+  .day-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 10px;
+    border-left: 3px solid var(--border);
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+
+  .day-item:active { opacity: 0.8; }
+  .day-item.is-flight { border-left-color: var(--accent); }
+  .day-item.is-off { border-left-color: var(--off-text); background: var(--off); }
+  .day-item.is-layover { border-left-color: #6090ff; background: var(--layover); }
+  .day-item.is-dh { border-left-color: var(--accent2); background: var(--dh); }
+  .day-item.is-today { border-color: var(--accent); }
+
+  .di-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 6px;
+  }
+
+  .di-date {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .di-badge {
+    font-size: 9px;
+    font-family: 'Space Mono', monospace;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .badge-flight { background: rgba(61,127,255,0.2); color: var(--accent); }
+  .badge-dh { background: rgba(0,212,170,0.15); color: var(--accent2); }
+  .badge-off { background: rgba(76,175,80,0.15); color: var(--off-text); }
+  .badge-layover { background: rgba(96,144,255,0.15); color: #6090ff; }
+
+  .di-route {
+    font-family: 'Space Mono', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .di-route .arr { color: var(--accent); }
+
+  .di-times {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+
+  .di-fh {
+    font-size: 12px;
+    color: var(--accent2);
+    font-family: 'Space Mono', monospace;
+    margin-top: 4px;
+  }
+
+  .di-htl {
+    font-size: 12px;
+    color: var(--warn);
+    margin-top: 4px;
+  }
+
+  /* DOCS VIEW */
+  .doc-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .doc-item.urgent { border-color: #ff4444; }
+  .doc-item.warn { border-color: var(--warn); }
+  .doc-item.ok { border-color: #2a4030; }
+
+  .doc-name {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .doc-exp {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .doc-icon { font-size: 24px; }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 100;
+    align-items: flex-end;
+    justify-content: center;
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 24px 24px 0 0;
+    padding: 24px 24px calc(24px + var(--safe-bottom));
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+    animation: slideup 0.3s ease;
+  }
+
+  @keyframes slideup {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+
+  .modal-handle {
+    width: 36px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 0 auto 20px;
+  }
+
+  .modal-date-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .modal-title {
+    font-size: 26px;
+    font-weight: 600;
+    margin-bottom: 20px;
+  }
+
+  .modal-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+
+  .modal-row:last-child { border-bottom: none; }
+  .modal-row .k { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }
+  .modal-row .v { font-family: 'Space Mono', monospace; font-weight: 700; text-align: right; }
+  .modal-row .v.blue { color: var(--accent); }
+  .modal-row .v.green { color: var(--accent2); }
+  .modal-row .v.orange { color: var(--warn); }
+
+  /* BOTTOM NAV */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex;
+    padding: 10px 0 calc(10px + var(--safe-bottom));
+    z-index: 50;
+  }
+
+  .nav-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 4px 0;
+    font-size: 10px;
+    font-family: 'DM Sans', sans-serif;
+    transition: color 0.15s;
+  }
+
+  .nav-btn.active { color: var(--accent); }
+  .nav-btn .icon { font-size: 20px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <h1>✈ FLIGHTROSTER</h1>
+    <span class="month">MAR 2026</span>
+  </div>
+</div>
+
+<div class="stats-row">
+  <div class="stat"><div class="sv">71:40</div><div class="sk">Ore Volo</div></div>
+  <div class="stat"><div class="sv green">10</div><div class="sk">Giorni OFF</div></div>
+  <div class="stat"><div class="sv orange">-3</div><div class="sk">Remaining</div></div>
+  <div class="stat"><div class="sv">8</div><div class="sk">Done</div></div>
+  <div class="stat"><div class="sv" style="font-size:13px;padding-top:2px">MXP</div><div class="sk">Base</div></div>
+</div>
+
+<!-- CALENDAR VIEW -->
+<div class="view active" id="view-cal">
+  <div class="cal-header-row">
+    <div>L</div><div>M</div><div>M</div><div>G</div><div>V</div><div>S</div><div>D</div>
+  </div>
+  <div class="cal-grid" id="calGrid"></div>
+</div>
+
+<!-- LIST VIEW -->
+<div class="view" id="view-list">
+  <div id="listItems"></div>
+</div>
+
+<!-- DOCS VIEW -->
+<div class="view" id="view-docs">
+  <div class="doc-item urgent">
+    <div><div class="doc-name">ETOPS</div><div class="doc-exp">Scade 31/03/2026</div></div>
+    <div class="doc-icon">🔴</div>
+  </div>
+  <div class="doc-item urgent">
+    <div><div class="doc-name">Visto India</div><div class="doc-exp">Scaduto 26/02/2026</div></div>
+    <div class="doc-icon">🔴</div>
+  </div>
+  <div class="doc-item warn">
+    <div><div class="doc-name">Take-Off / Landing 787</div><div class="doc-exp">Scade 02/05/2026</div></div>
+    <div class="doc-icon">🟡</div>
+  </div>
+  <div class="doc-item warn">
+    <div><div class="doc-name">Line Check 787</div><div class="doc-exp">Scade 31/05/2026</div></div>
+    <div class="doc-icon">🟡</div>
+  </div>
+  <div class="doc-item ok">
+    <div><div class="doc-name">Medical Check (IML)</div><div class="doc-exp">Scade 06/06/2026</div></div>
+    <div class="doc-icon">🟢</div>
+  </div>
+  <div style="margin-top:8px; padding:16px; background:var(--surface); border-radius:14px; border:1px solid var(--border)">
+    <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:10px; font-family:'Space Mono',monospace">Route Expiry</div>
+    <div style="font-size:13px; color:var(--text); line-height:2">
+      CAR · SAM <span style="color:var(--muted); font-family:'Space Mono',monospace; font-size:11px">31/01/2027</span><br>
+      AFI · EUR · MID/ASIA · NAM · NAT <span style="color:var(--muted); font-family:'Space Mono',monospace; font-size:11px">28/02/2027</span>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal" onclick="handleOverlayClick(event)">
+  <div class="modal" id="modalContent">
+    <div class="modal-handle"></div>
+    <div class="modal-date-label" id="mDate"></div>
+    <div class="modal-title" id="mTitle"></div>
+    <div id="mBody"></div>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+  <button class="nav-btn active" id="btn-cal" onclick="switchTab('cal')">
+    <span class="icon">📅</span>Calendario
+  </button>
+  <button class="nav-btn" id="btn-list" onclick="switchTab('list')">
+    <span class="icon">📋</span>Lista
+  </button>
+  <button class="nav-btn" id="btn-docs" onclick="switchTab('docs')">
+    <span class="icon">📄</span>Documenti
+  </button>
+</div>
+
+<script>
+const TODAY = 4; // marzo 2026
+
+const days = {
+  1:  { wd:'dom', type:'dh',      flights:[{fn:'NO842', dep:'MXP', arr:'WAW', etd:'07:00', eta:'09:05', note:'Neos DIVISA', dh:true}], ckin:'05:30', htl:true },
+  2:  { wd:'lun', type:'flight',  flights:[{fn:'164', dep:'WAW', arr:'KBV', etd:'18:15', eta:'→', note:'notte in volo'}], ckin:'16:45', htl:true },
+  3:  { wd:'mar', type:'flight',  flights:[{fn:'164', dep:'WAW', arr:'KBV', etd:'', eta:'04:55', fh:'10:40'}], htl:true },
+  4:  { wd:'mer', type:'layover', htl:true, city:'Krabi 🇹🇭' },
+  5:  { wd:'gio', type:'layover', htl:true, city:'Krabi 🇹🇭' },
+  6:  { wd:'ven', type:'layover', htl:true, city:'Krabi 🇹🇭' },
+  7:  { wd:'sab', type:'flight',  flights:[{fn:'537', dep:'KBV', arr:'PRG', etd:'04:30', eta:'16:20', fh:'11:50'}], ckin:'03:00', htl:true },
+  8:  { wd:'dom', type:'flight',  flights:[{fn:'684', dep:'PRG', arr:'FCO', etd:'18:05', eta:'19:50', fh:'01:45'}], ckin:'16:35', htl:true },
+  9:  { wd:'lun', type:'dh',      flights:[{fn:'FRECCIA9624', dep:'FCO', arr:'MXP', etd:'09:20', eta:'13:48', note:'Biglietti Da Acquistare', dh:true}], ckin:'08:35', htl:false },
+  10: { wd:'mar', type:'off' },
+  11: { wd:'mer', type:'off' },
+  12: { wd:'gio', type:'off' },
+  13: { wd:'ven', type:'flight',  flights:[{fn:'573', dep:'MXP', arr:'LRM', etd:'08:30', eta:'18:20', fh:'09:50'}], ckin:'07:00', htl:true },
+  14: { wd:'sab', type:'flight',  flights:[{fn:'653', dep:'LRM', arr:'FCO', etd:'19:10', eta:'→', note:'notte in volo'}], ckin:'17:40', htl:true },
+  15: { wd:'dom', type:'flight',  flights:[{fn:'653', dep:'LRM', arr:'FCO', etd:'', eta:'04:40', fh:'09:30'},{fn:'AZ2028', dep:'FCO', arr:'LIN', etd:'07:30', eta:'08:40', dh:true},{fn:'Galaxy', dep:'LIN', arr:'MXP', etd:'08:55', eta:'10:10', dh:true}], ckin:'05:30' },
+  16: { wd:'lun', type:'off' },
+  17: { wd:'mar', type:'dh',      flights:[{fn:'Galaxy', dep:'MXP', arr:'VRN', etd:'07:00', eta:'09:30', dh:true},{fn:'298', dep:'VRN', arr:'ZNZ', etd:'22:40', eta:'→', note:'notte in volo'}], ckin:'07:00', htl:true },
+  18: { wd:'mer', type:'flight',  flights:[{fn:'298', dep:'VRN', arr:'ZNZ', etd:'', eta:'06:40', fh:'08:00'}], htl:true },
+  19: { wd:'gio', type:'layover', htl:true, city:'Zanzibar 🇹🇿' },
+  20: { wd:'ven', type:'layover', htl:true, city:'Zanzibar 🇹🇿' },
+  21: { wd:'sab', type:'layover', htl:true, city:'Zanzibar 🇹🇿' },
+  22: { wd:'dom', type:'flight',  flights:[{fn:'684', dep:'ZNZ', arr:'PRG', etd:'07:45', eta:'16:35', fh:'08:50'},{fn:'NO684', dep:'PRG', arr:'FCO', etd:'18:05', eta:'19:50', dh:true}], ckin:'06:15', htl:true },
+  23: { wd:'lun', type:'layover', htl:true, city:'Roma FCO 🇮🇹' },
+  24: { wd:'mar', type:'flight',  flights:[{fn:'230', dep:'FCO', arr:'MXP', etd:'12:10', eta:'13:25', fh:'01:15'}], ckin:'10:40' },
+  25: { wd:'mer', type:'offr' },
+  26: { wd:'gio', type:'offr' },
+  27: { wd:'ven', type:'offr' },
+  28: { wd:'sab', type:'offr' },
+  29: { wd:'dom', type:'dh',      flights:[{fn:'Galaxy', dep:'MXP', arr:'VRN', etd:'14:00', eta:'16:20', dh:true}], ckin:'14:00', htl:true },
+  30: { wd:'lun', type:'flight',  flights:[{fn:'152', dep:'VRN', arr:'NOS', etd:'18:00', eta:'→', note:'notte in volo'}], ckin:'16:30', htl:true },
+  31: { wd:'mar', type:'flight',  flights:[{fn:'152', dep:'VRN', arr:'NOS', etd:'', eta:'05:30', fh:'08:50'}], htl:true },
+};
+
+const wdFull = {lun:'Lunedì',mar:'Martedì',mer:'Mercoledì',gio:'Giovedì',ven:'Venerdì',sab:'Sabato',dom:'Domenica'};
+
+function typeClass(t) {
+  if (t==='off'||t==='offr') return 'is-off';
+  if (t==='layover') return 'is-layover';
+  if (t==='dh') return 'is-dh';
+  return 'is-flight';
+}
+
+function buildCalendar() {
+  const grid = document.getElementById('calGrid');
+  for (let i=0; i<6; i++) {
+    const e = document.createElement('div');
+    e.className = 'cday empty';
+    grid.appendChild(e);
+  }
+  for (let d=1; d<=31; d++) {
+    const info = days[d] || {wd:'',type:'off'};
+    const cell = document.createElement('div');
+    cell.className = `cday ${typeClass(info.type)}${d===TODAY?' is-today':''}`;
+
+    let route = '';
+    if (info.flights && info.flights[0]) {
+      const f = info.flights[0];
+      route = `<div class="cday-route">${f.dep||''}<br>${f.arr||''}</div>`;
+    } else if (info.type==='off') {
+      route = `<div class="cday-route" style="color:var(--off-text);font-size:8px">OFF</div>`;
+    } else if (info.type==='offr') {
+      route = `<div class="cday-route" style="color:var(--off-text);font-size:8px">OFF(R)</div>`;
+    } else if (info.type==='layover') {
+      route = `<div class="cday-route" style="font-size:10px">🏨</div>`;
+    }
+
+    const dotClass = info.type==='off'||info.type==='offr' ? 'dot-off' : info.type==='layover' ? 'dot-layover' : info.type==='dh' ? 'dot-dh' : 'dot-flight';
+
+    cell.innerHTML = `<div class="cday-num">${d}</div>${route}<div class="cday-dot ${dotClass}"></div>`;
+    cell.addEventListener('click', () => openModal(d, info));
+    grid.appendChild(cell);
+  }
+}
+
+function buildList() {
+  const list = document.getElementById('listItems');
+  for (let d=1; d<=31; d++) {
+    const info = days[d] || {wd:'',type:'off'};
+    const item = document.createElement('div');
+    item.className = `day-item ${typeClass(info.type)}${d===TODAY?' is-today':''}`;
+
+    let badgeClass = 'badge-flight', badgeText = 'VOLO';
+    if (info.type==='dh') { badgeClass='badge-dh'; badgeText='DH'; }
+    else if (info.type==='off') { badgeClass='badge-off'; badgeText='OFF'; }
+    else if (info.type==='offr') { badgeClass='badge-off'; badgeText='OFF(R)'; }
+    else if (info.type==='layover') { badgeClass='badge-layover'; badgeText='LAYOVER'; }
+
+    let routeHtml = '';
+    if (info.flights && info.flights[0]) {
+      const f = info.flights[0];
+      routeHtml = `<div class="di-route">${f.dep} <span class="arr">→</span> ${f.arr}</div>`;
+      if (f.etd||f.eta) routeHtml += `<div class="di-times">${f.etd?'ETD '+f.etd:''} ${f.eta&&f.eta!=='→'?'· ETA '+f.eta:''} UTC</div>`;
+      if (f.fh) routeHtml += `<div class="di-fh">⏱ ${f.fh}h</div>`;
+    } else if (info.city) {
+      routeHtml = `<div class="di-route" style="font-size:14px">${info.city}</div>`;
+    }
+
+    item.innerHTML = `
+      <div class="di-top">
+        <div class="di-date">${d} Mar · ${(info.wd||'').toUpperCase()}</div>
+        <span class="di-badge ${badgeClass}">${badgeText}</span>
+      </div>
+      ${routeHtml}
+      ${info.htl ? '<div class="di-htl">🏨 Hotel</div>' : ''}
+      ${info.ckin ? `<div class="di-times" style="margin-top:4px">Check-in: ${info.ckin} UTC</div>` : ''}
+    `;
+    item.addEventListener('click', () => openModal(d, info));
+    list.appendChild(item);
+  }
+}
+
+function openModal(d, info) {
+  document.getElementById('mDate').textContent = `${wdFull[info.wd]||''} · Marzo 2026`;
+  document.getElementById('mTitle').textContent = `${d} Marzo`;
+  let html = '';
+  if (info.ckin) html += `<div class="modal-row"><span class="k">Check-In</span><span class="v blue">${info.ckin} UTC</span></div>`;
+  if (info.type==='off') html += `<div class="modal-row"><span class="k">Giornata</span><span class="v">🛋 Giorno libero</span></div>`;
+  if (info.type==='offr') html += `<div class="modal-row"><span class="k">Giornata</span><span class="v">🛋 OFF su richiesta</span></div>`;
+  if (info.type==='layover') html += `<div class="modal-row"><span class="k">Dove</span><span class="v">${info.city||'In hotel'}</span></div>`;
+  if (info.flights) {
+    info.flights.forEach((f,i) => {
+      html += `<div class="modal-row" style="flex-direction:column;gap:4px;align-items:flex-start">
+        <span class="k">Segmento ${i+1}${f.dh?' · DH':''}${f.fn?' · '+f.fn:''}</span>
+        <span class="v" style="font-size:20px">${f.dep} → ${f.arr}</span>
+        ${f.etd||f.eta ? `<span style="font-size:12px;color:var(--muted);font-family:'Space Mono',monospace">${f.etd?'ETD '+f.etd:''} ${f.eta&&f.eta!=='→'?'· ETA '+f.eta:''} UTC</span>` : ''}
+        ${f.fh ? `<span style="font-size:12px;color:var(--accent2)">⏱ FH: ${f.fh}h</span>` : ''}
+        ${f.note ? `<span style="font-size:12px;color:var(--warn)">📋 ${f.note}</span>` : ''}
+      </div>`;
+    });
+  }
+  if (info.htl) html += `<div class="modal-row"><span class="k">Pernottamento</span><span class="v green">🏨 Hotel</span></div>`;
+  document.getElementById('mBody').innerHTML = html;
+  document.getElementById('modal').classList.add('open');
+}
+
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('modal')) {
+    document.getElementById('modal').classList.remove('open');
+  }
+}
+
+function switchTab(tab) {
+  ['cal','list','docs'].forEach(t => {
+    document.getElementById('view-'+t).classList.toggle('active', t===tab);
+    document.getElementById('btn-'+t).classList.toggle('active', t===tab);
+  });
+}
+
+// Register service worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js');
+}
+
+buildCalendar();
+buildList();
+</script>
+</body>
+</html>
