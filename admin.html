@@ -106,6 +106,7 @@ select.input{appearance:none;}
     <input type="file" id="pdfInput" accept="application/pdf" style="display:none" onchange="importPDF(event)">
     <button class="btn" style="background:var(--warn)" onclick="document.getElementById('pdfInput').click()">📄 Scegli PDF Roster Neos</button>
     <div id="importStatus" style="margin-top:10px;font-size:13px;color:var(--muted);display:none"></div>
+    <textarea id="debugText" style="display:none;width:100%;height:160px;margin-top:10px;font-size:10px;font-family:monospace;background:#f0f0f0;border:1px solid #ccc;border-radius:8px;padding:8px" readonly></textarea>
   </div>
 
   <div class="section-title">Giorni del mese</div>
@@ -350,9 +351,14 @@ async function importPDF(event) {
       fullText += tc.items.map(it => it.str).join(' ') + '\n';
     }
 
+    // DEBUG
+    const debugEl = document.getElementById('debugText');
+    if (debugEl) { debugEl.style.display='block'; debugEl.value='--- TESTO ESTRATTO (prime 1000 chars) ---\n' + fullText.substring(0,1000); }
+
     const result = parseNeosRoster(fullText);
     if (result.daysFound === 0) {
-      status.textContent = '⚠️ Nessun giorno trovato. Verifica che sia un roster Neos valido.';
+      status.style.color = 'var(--warn)';
+      status.textContent = '⚠️ Nessun giorno trovato — vedi testo estratto qui sotto.';
       return;
     }
 
