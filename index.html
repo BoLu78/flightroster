@@ -70,6 +70,8 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
 .cday-num { font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:700; color:var(--muted); margin-bottom:3px; }
 .cday-route { font-family:'IBM Plex Mono',monospace; font-size:9px; font-weight:700; color:var(--text); line-height:1.4; }
 .cday-icon { position:absolute; bottom:4px; right:4px; font-size:11px; }
+.cday.is-overnight-start { border-right:3px solid var(--accent) !important; border-radius:8px 0 0 8px; }
+.cday.is-overnight-end { border-left:3px solid var(--accent) !important; border-radius:0 8px 8px 0; }
 
 /* LIST */
 .view { display:none; padding:0 16px; }
@@ -266,7 +268,7 @@ function buildCalendar(days, changedDays) {
     } else if (info && (info.type==='off'||info.type==='offr')) {
       route = `<div class="cday-route" style="color:var(--off-text);font-size:13px">🏠</div>`;
     } else if (info && info.type==='layover') {
-      route = `<div class="cday-route" style="font-size:11px;color:#3b82f6">${info.city||'LAYOVER'}</div>`;
+      route = `<div class="cday-route" style="font-size:9px;color:#3b82f6;letter-spacing:-0.02em">${info.city||'LAY'}</div>`;
     } else if (info && info.type==='dh') {
       route = `<div class="cday-route" style="font-size:13px">🚂</div>`;
     }
