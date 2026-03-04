@@ -74,7 +74,7 @@ select.input{appearance:none;}
 <body>
 
 <div class="topbar">
-  <h1>⚙ ROSTER ADMIN <span style="font-size:10px;opacity:0.6;font-weight:400">v4.2</span></h1>
+  <h1>⚙ ROSTER ADMIN <span style="font-size:10px;opacity:0.6;font-weight:400">v4.3</span></h1>
   <a href="index.html" class="back-btn">← Roster</a>
 </div>
 
@@ -393,7 +393,7 @@ function parseNeosRoster(text) {
   const WDS = ['dom','lun','mar','mer','gio','ven','sab'];
   const DAY_ABB = {su:'dom',mo:'lun',tu:'mar',we:'mer',th:'gio',fr:'ven',sa:'sab'};
   const MNAMES = ['','Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
-  const SKIP = new Set(['DEP','ARR','ETD','ETA','FH','DH','HTL','MXP']);
+  const SKIP = new Set(['DEP','ARR','ETD','ETA','FH','DH','HTL']);
   let fhTotal='', offCount='', remaining='', month='';
   const days = {};
 
@@ -500,8 +500,8 @@ function extractFlights(rest, SKIP) {
     const fn=m[1]||'', dep=m[2], arr=m[3], etd=m[4], eta=m[5]||'';
     const fh=(m[6]||'').replace('.', ':').replace(',', ':');
     if (SKIP.has(dep)||SKIP.has(arr)) continue;
-    const after = rest.substring(m.index+m[0].length, m.index+m[0].length+25);
-    const before = rest.substring(Math.max(0,m.index-5), m.index);
+    const after = rest.substring(m.index+m[0].length, m.index+m[0].length+60);
+    const before = rest.substring(Math.max(0,m.index-10), m.index);
     const isDH = /\bDH\b/.test(after)||/\bDH\b/.test(before);
     flights.push({fn, dep, arr: arr==='>'?'···':arr, etd, eta, fh, dh:isDH});
   }
