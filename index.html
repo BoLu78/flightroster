@@ -70,8 +70,13 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
 .cday-num { font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:700; color:var(--muted); margin-bottom:3px; }
 .cday-route { font-family:'IBM Plex Mono',monospace; font-size:9px; font-weight:700; color:var(--text); line-height:1.4; }
 .cday-icon { position:absolute; bottom:4px; right:4px; font-size:11px; }
-.cday.is-overnight-start { border-right:3px solid var(--accent) !important; border-radius:8px 0 0 8px; }
-.cday.is-overnight-end { border-left:3px solid var(--accent) !important; border-radius:0 8px 8px 0; }
+.cday.is-overnight-start { position:relative; }
+.cday.is-overnight-start::after { content:''; position:absolute; bottom:0; right:-3px; width:3px; height:100%; background:var(--accent); z-index:2; }
+.cday.is-overnight-end { position:relative; }
+.cday.is-overnight-end::before { content:''; position:absolute; bottom:0; left:-3px; width:3px; height:100%; background:var(--accent); z-index:2; }
+/* Overnight bar connecting cells */
+.cday.is-overnight-start { background: linear-gradient(to right, var(--surface), #dbeafe) !important; border-right-color: var(--accent) !important; }
+.cday.is-overnight-end { background: linear-gradient(to right, #dbeafe, var(--surface)) !important; border-left-color: var(--accent) !important; }
 
 /* LIST */
 .view { display:none; padding:0 16px; }
