@@ -385,116 +385,123 @@ function loadScript(src) {
 
 function parseNeosRoster(text) {
   const days = {};
-  let daysFound = 0;
-  let month = '', fh = '', off = '', remaining = '';
+  const WDS = ['dom','lun','mar','mer','gio','ven','sab'];
+  const DAY_ABB = {su:'dom',mo:'lun',tu:'mar',we:'mer',th:'gio',fr:'ven',sa:'sab'};
+  let fhTotal = '', offCount = '', remaining = '', month = '';
 
-  // Extract month from "From DD/MM/YYYY to DD/MM/YYYY"
-  const monthMatch = text.match(/From\s+(\d{2}\/\d{2}\/(\d{4}))/);
-  if (monthMatch) {
-    const months = ['','Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
-    const parts = monthMatch[1].split('/');
-    month = months[parseInt(parts[1])] + ' ' + parts[2];
-  }
-
-  // Extract flight hours
-  const fhMatch = text.match(/Flight Hours[^\d]*(\d+\.\d+)/);
-  if (fhMatch) fh = fhMatch[1].replace('.', ':');
-
-  // Extract Day OFF count
-  const offMatch = text.match(/Day OFF[^\d]*Month[^\d]*(\d+)/);
-  if (offMatch) off = offMatch[1];
-
-  // Extract remaining
-  const remMatch = text.match(/Remaining[^\d-]*(-?\d+)/);
+  // Stats
+  const mMatch = text.match(/From\s+(\d{2})\/(\d{2})\/(\d{4})/);
+  const MNAMES = ['','Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+  if (mMatch) month = MNAMES[parseInt(mMatch[2])] + ' ' + mMatch[3];
+  const fhMatch = text.match(/(\d{2}[.,]\d{2})\s*\n?\s*0\s+00\.00/);
+  if (fhMatch) fhTotal = fhMatch[1].replace('.', ':').replace(',', ':');
+  const offMatch = text.match(/Month\s+(\d+)/i);
+  if (offMatch) offCount = offMatch[1];
+  const remMatch = text.match(/Remaining\s+(-?\d+)/i);
   if (remMatch) remaining = remMatch[1];
 
-  const WDS = ['dom','lun','mar','mer','gio','ven','sab'];
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l);
 
-  // Split text into lines and parse day by day
-  const lines = text.split(/\n/);
+  let curDay = null, curWd = null, curCkin = null, curHtl = false;
+  let curFlights = [], curType = null, curMonth = null;
+
+  function flushDay() {
+    if (!curDay) return;
+    if (curType === 'layover') {
+      days[curDay] = {type:'layover', wd:curWd, htl:true, city:''};
+    } else if (curType === 'off') {
+      days[curDay] = {type:'off', wd:curWd};
+    } else if (curType === 'offr') {
+      days[curDay] = {type:'offr', wd:curWd};
+    } else if (curFlights.length > 0) {
+      const allDH = curFlights.every(f => f.dh);
+      days[curDay] = {type: allDH?'dh':'flight', wd:curWd, ckin:curCkin||'', htl:curHtl, flights:curFlights};
+    } else if (curCkin) {
+      days[curDay] = {type:'flight', wd:curWd, ckin:curCkin, htl:curHtl, flights:[]};
+    }
+  }
+
+  const skipRe = /^(DATE|DUTY|INDIVIDUAL|NEOS|Cop\.|Print|LEGENDA|EXT|ALL TIMES|Flight Hours|Day OFF|Holidays|SBY|YTD|MXP$|B787$|\d+$|00\.00)/i;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
+    if (skipRe.test(line)) continue;
 
-    // Match date pattern DD/MM/YYYY
-    const dateMatch = line.match(/(\d{2})\/(\d{2})\/(\d{4})/);
-    if (!dateMatch) continue;
+    // New date line: DD/MM/YYYY su|mo|...
+    const dateM = line.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(su|mo|tu|we|th|fr|sa)\s*(.*)/i);
+    if (dateM) {
+      flushDay();
+      curDay = parseInt(dateM[1]);
+      curMonth = parseInt(dateM[2]);
+      curWd = DAY_ABB[dateM[4]] || dateM[4];
+      curCkin = null; curHtl = false; curFlights = []; curType = null;
+      const rest = dateM[5] || '';
+      if (/LAYOVER/i.test(rest)) { curType = 'layover'; curHtl = /HTL/.test(rest); }
+      else if (/OFF\(R\)/.test(rest)) { curType = 'offr'; }
+      else if (/\bOFF\b/.test(rest) && !/\d{3,4}/.test(rest)) { curType = 'off'; }
+      else {
+        const tm = rest.match(/(\d{2}:\d{2})/);
+        if (tm) curCkin = tm[1];
+        if (/HTL/.test(rest)) curHtl = true;
+      }
+      continue;
+    }
 
-    const day = parseInt(dateMatch[1]);
-    if (day < 1 || day > 31) continue;
-
-    const date = new Date(parseInt(dateMatch[3]), parseInt(dateMatch[2])-1, day);
-    const wd = WDS[date.getDay()];
-
-    const rest = line + ' ' + (lines[i+1] || '') + ' ' + (lines[i+2] || '');
+    if (!curDay) continue;
 
     // LAYOVER
-    if (/LAYOVER/i.test(rest)) {
-      days[day] = { type: 'layover', wd, htl: true };
-      daysFound++;
+    if (/^LAYOVER/i.test(line)) { curType = 'layover'; if (/HTL/.test(line)) curHtl = true; continue; }
+
+    // DH segment: "DH DEP ARR ETD ETA ..."
+    const dhM = line.match(/\bDH\s+([A-Z]{3})\s+([A-Z]{3})\s+(\d{2}:\d{2})\s+(\d{2}:\d{2})(.*)/);
+    if (dhM) {
+      if (/HTL/.test(line)) curHtl = true;
+      let note = dhM[5].replace(/\bHTL\b/,'').replace(/\bNeos\b/,'').replace(/\bB787\b/,'').trim();
+      curFlights.push({fn:'', dep:dhM[1], arr:dhM[2], etd:dhM[3], eta:dhM[4], fh:'', dh:true, note});
+      if (!curType) curType = 'dh';
       continue;
     }
 
-    // OFF(R)
-    if (/OFF\(R\)/.test(rest)) {
-      days[day] = { type: 'offr', wd };
-      daysFound++;
+    // Numbered flight: "537 KBV PRG 04:30 16:20 11.50 HTL"
+    const flM = line.match(/^(NO\d+|AZ\d+|\d{3,4})\s+([A-Z]{3})\s+([A-Z>]{3})\s*(\d{2}:\d{2})?\s*(\d{2}:\d{2})?\s*(\d{2}[.,]\d{2})?(.*)/);
+    if (flM) {
+      const fn=flM[1], dep=flM[2], arr=flM[3]==='>'?'···':flM[3];
+      const etd=flM[4]||'', eta=flM[5]||'';
+      const fhv = flM[6] ? flM[6].replace('.', ':').replace(',',':') : '';
+      if (/HTL/.test(flM[7]||'')) curHtl = true;
+      // DH check: is "DH" present before the flight number in this line?
+      const preIdx = line.indexOf(flM[1]);
+      const isDH = /\bDH\b/.test(line.substring(0, preIdx));
+      curFlights.push({fn, dep, arr, etd, eta, fh:fhv, dh:isDH});
+      if (!curType) curType = isDH ? 'dh' : 'flight';
       continue;
     }
 
-    // OFF
-    if (/\bOFF\b/.test(rest) && !/LAYOVER|\d{3,4}/.test(rest)) {
-      days[day] = { type: 'off', wd };
-      daysFound++;
+    // Continuation "> ARR ETA FH" for overnight flights
+    const contM = line.match(/^[.\s]*>\s+([A-Z]{3})\s+(\d{2}:\d{2})\s*(\d{2}[.,]\d{2})?(.*)/);
+    if (contM && curFlights.length > 0) {
+      const lf = curFlights[curFlights.length - 1];
+      lf.arr = contM[1]; lf.eta = contM[2];
+      if (contM[3]) lf.fh = contM[3].replace('.', ':').replace(',',':');
+      if (/HTL/.test(contM[4]||'')) curHtl = true;
       continue;
     }
 
-    // Flight number pattern: 2-4 digits or NO+digits
-    const flightMatch = rest.match(/\b(NO\d+|\d{3,4})\s+([A-Z]{3})\s+([>A-Z]{3})\s+(\d{2}:\d{2})?\s*(\d{2}:\d{2})?/);
-    if (flightMatch) {
-      const fn = flightMatch[1];
-      const dep = flightMatch[2];
-      const arr = flightMatch[3] === '>' ? '···' : flightMatch[3];
-      const etd = flightMatch[4] || '';
-      const eta = flightMatch[5] || '';
-
-      // Check if DH
-      const isDH = /\bDH\b/.test(rest);
-
-      // Extract FH
-      const fhMatch2 = rest.match(/(\d+\.\d+)/);
-      const fh2 = fhMatch2 ? fhMatch2[1].replace('.', ':') : '';
-
-      // Extract ckin
-      const ckinMatch = line.match(/(\d{2}:\d{2})\s*$/);
-      const ckin = ckinMatch ? ckinMatch[1] : '';
-
-      // Hotel
-      const htl = /HTL/.test(rest);
-
-      days[day] = {
-        type: isDH ? 'dh' : 'flight',
-        wd,
-        ckin,
-        htl,
-        flights: [{ fn, dep, arr, etd, eta, fh: fh2, dh: isDH }]
-      };
-      daysFound++;
+    // Dots + time = check-in
+    const dotsM = line.match(/^[.\s]+(\d{2}:\d{2})\s*(HTL)?/);
+    if (dotsM && !/[A-Z]{3}\s+[A-Z]{3}/.test(line)) {
+      if (dotsM[2]) curHtl = true;
+      if (!curCkin) curCkin = dotsM[1];
       continue;
     }
 
-    // DH without flight number (train/bus)
-    if (/\bDH\b/.test(rest)) {
-      const depMatch = rest.match(/([A-Z]{3})\s+([A-Z]{3})/);
-      days[day] = {
-        type: 'dh', wd, htl: /HTL/.test(rest),
-        flights: depMatch ? [{ dep: depMatch[1], arr: depMatch[2], dh: true }] : []
-      };
-      daysFound++;
-    }
+    // Bare HTL
+    if (/^HTL$/.test(line)) { curHtl = true; continue; }
   }
 
-  return { days, daysFound, month, fh, off, remaining };
+  flushDay();
+
+  return { days, daysFound: Object.keys(days).length, month, fh: fhTotal, off: offCount, remaining };
 }
 
 async function saveRoster() {
