@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Roster Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#eef1f6; --surface:#f8fafc; --border:#c8d0dc;
+  --accent:#2563eb; --accent2:#0d9488; --warn:#ea6c1a; --danger:#dc2626;
+  --text:#1a2030; --muted:#5a6680;
+  --safe-top:env(safe-area-inset-top); --safe-bottom:env(safe-area-inset-bottom);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;min-height:100vh;padding-bottom:40px;}
+
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:calc(14px + var(--safe-top)) 18px 14px;display:flex;justify-content:space-between;align-items:center;}
+.topbar h1{font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--warn);font-weight:700;}
+.back-btn{font-size:13px;color:var(--accent);text-decoration:none;font-weight:600;}
+
+/* LOGIN */
+.login-wrap{display:flex;align-items:center;justify-content:center;min-height:80vh;padding:24px;}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:32px 28px;width:100%;max-width:360px;}
+.login-card h2{font-size:22px;font-weight:700;margin-bottom:8px;}
+.login-card p{font-size:14px;color:var(--muted);margin-bottom:24px;}
+.input{width:100%;border:1px solid var(--border);border-radius:10px;padding:13px 16px;font-size:16px;font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--text);margin-bottom:14px;}
+.input:focus{outline:none;border-color:var(--accent);}
+.btn{width:100%;background:var(--accent);color:white;border:none;border-radius:10px;padding:14px;font-size:16px;font-weight:600;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;}
+.btn:active{opacity:0.85;}
+.btn.danger{background:var(--danger);}
+.btn.green{background:var(--accent2);}
+.err{color:var(--danger);font-size:13px;margin-top:8px;display:none;}
+
+/* ADMIN */
+.admin-wrap{display:none;padding:16px;}
+.section-title{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin:20px 0 10px;}
+.info-bar{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;}
+.info-bar .label{font-size:13px;color:var(--muted);}
+.info-bar .val{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--accent);}
+
+/* DAY EDITOR */
+.day-row{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;}
+.day-row:active{opacity:0.8;}
+.day-row .dr-date{font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;}
+.day-row .dr-info{font-size:13px;color:var(--muted);margin-top:2px;}
+.day-row .dr-icon{font-size:20px;}
+
+/* EDIT MODAL */
+.edit-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;align-items:flex-end;}
+.edit-modal.open{display:flex;}
+.edit-sheet{background:var(--surface);border-radius:24px 24px 0 0;padding:24px 20px calc(24px + var(--safe-bottom));width:100%;max-height:90vh;overflow-y:auto;animation:slideup 0.3s ease;}
+@keyframes slideup{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.edit-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 20px;}
+.edit-title{font-size:20px;font-weight:700;margin-bottom:20px;}
+.field{margin-bottom:14px;}
+.field label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:6px;}
+select.input{appearance:none;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.btn-row{display:flex;gap:10px;margin-top:20px;}
+.btn-row .btn{flex:1;}
+
+/* STATS EDITOR */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.stats-grid .field{margin-bottom:0;}
+
+/* SAVE BAR */
+.save-bar{position:fixed;bottom:calc(16px + var(--safe-bottom));left:16px;right:16px;z-index:80;}
+.save-btn-main{width:100%;background:var(--accent);color:white;border:none;border-radius:14px;padding:16px;font-size:17px;font-weight:700;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;box-shadow:0 4px 20px rgba(37,99,235,0.3);}
+.save-btn-main:active{opacity:0.85;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>⚙ ROSTER ADMIN</h1>
+  <a href="index.html" class="back-btn">← Roster</a>
+</div>
+
+<!-- LOGIN -->
+<div class="login-wrap" id="loginWrap">
+  <div class="login-card">
+    <h2>🔒 Accesso Admin</h2>
+    <p>Inserisci la password per modificare il roster</p>
+    <input type="password" class="input" id="pwdInput" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="btn" onclick="doLogin()">Accedi</button>
+    <div class="err" id="loginErr">Password errata</div>
+  </div>
+</div>
+
+<!-- ADMIN PANEL -->
+<div class="admin-wrap" id="adminWrap">
+
+  <div class="section-title">Info Mese</div>
+  <div class="stats-grid">
+    <div class="field"><label>Mese</label><input class="input" id="fMonth" placeholder="es. Aprile 2026"></div>
+    <div class="field"><label>Ore Volo</label><input class="input" id="fFH" placeholder="es. 71:40"></div>
+    <div class="field"><label>Giorni OFF</label><input class="input" id="fOff" placeholder="es. 10"></div>
+    <div class="field"><label>Remaining</label><input class="input" id="fRem" placeholder="es. -3"></div>
+  </div>
+
+  <div class="section-title">Giorni del mese</div>
+  <div id="daysList"></div>
+
+  <div style="height:80px"></div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="edit-modal" id="editModal">
+  <div class="edit-sheet">
+    <div class="edit-handle"></div>
+    <div class="edit-title" id="editTitle">Modifica giorno</div>
+
+    <div class="field">
+      <label>Tipo giorno</label>
+      <select class="input" id="eType" onchange="toggleFields()">
+        <option value="">— Vuoto —</option>
+        <option value="flight">✈️ Volo</option>
+        <option value="dh">🚂 DH (Deadhead)</option>
+        <option value="layover">🏨 Layover</option>
+        <option value="off">🏠 OFF</option>
+        <option value="offr">🏠 OFF (Richiesto)</option>
+      </select>
+    </div>
+
+    <div id="flightFields">
+      <div class="row2">
+        <div class="field"><label>Volo N°</label><input class="input" id="eFN" placeholder="es. 573"></div>
+        <div class="field"><label>Check-in UTC</label><input class="input" id="eCkin" placeholder="es. 07:00"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Da (IATA)</label><input class="input" id="eDep" placeholder="es. MXP"></div>
+        <div class="field"><label>A (IATA)</label><input class="input" id="eArr" placeholder="es. LRM"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>ETD UTC</label><input class="input" id="eEtd" placeholder="es. 08:30"></div>
+        <div class="field"><label>ETA UTC</label><input class="input" id="eEta" placeholder="es. 18:20"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>FH (ore volo)</label><input class="input" id="eFh" placeholder="es. 09:50"></div>
+        <div class="field"><label>Hotel?</label>
+          <select class="input" id="eHtl">
+            <option value="true">🟡 Sì</option>
+            <option value="false">No</option>
+          </select>
+        </div>
+      </div>
+      <div class="field"><label>Note</label><input class="input" id="eNote" placeholder="es. Biglietti Da Acquistare"></div>
+    </div>
+
+    <div id="layoverFields" style="display:none">
+      <div class="field"><label>Città</label><input class="input" id="eCity" placeholder="es. Zanzibar 🇹🇿"></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn danger" onclick="clearDay()">🗑 Cancella</button>
+      <button class="btn green" onclick="saveDay()">✓ Salva</button>
+    </div>
+    <button class="btn" style="margin-top:10px;background:var(--bg);color:var(--muted);border:1px solid var(--border)" onclick="closeEdit()">Annulla</button>
+  </div>
+</div>
+
+<!-- SAVE BAR -->
+<div class="save-bar" id="saveBar" style="display:none">
+  <button class="save-btn-main" onclick="saveRoster()">💾 Salva Roster su Cloud</button>
+</div>
+
+<script>
+const BIN_ID = '69a8690d43b1c97be9b354e6';
+const API_KEY = '$2a$10$zML8H2V0JzBwhx58kTx66.eL3u5VDf3XJCq3YdWHFJoZT6ikdWeeS';
+const ADMIN_PWD = 'neos787';
+const WDS = ['dom','lun','mar','mer','gio','ven','sab'];
+const WD_NAMES = {lun:'Lun',mar:'Mar',mer:'Mer',gio:'Gio',ven:'Ven',sab:'Sab',dom:'Dom'};
+
+let rosterData = { month:'', fh:'', off:'', remaining:'', updated:'', days:{} };
+let editingDay = null;
+let hasChanges = false;
+
+function doLogin() {
+  const pwd = document.getElementById('pwdInput').value;
+  if (pwd === ADMIN_PWD) {
+    document.getElementById('loginWrap').style.display = 'none';
+    document.getElementById('adminWrap').style.display = 'block';
+    loadData();
+  } else {
+    document.getElementById('loginErr').style.display = 'block';
+  }
+}
+
+async function loadData() {
+  try {
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
+      headers: { 'X-Access-Key': API_KEY }
+    });
+    const data = await res.json();
+    rosterData = data.record;
+    populateForm();
+  } catch(e) {
+    alert('Errore caricamento dati. Controlla la connessione.');
+  }
+}
+
+function populateForm() {
+  document.getElementById('fMonth').value = rosterData.month || '';
+  document.getElementById('fFH').value = rosterData.fh || '';
+  document.getElementById('fOff').value = rosterData.off || '';
+  document.getElementById('fRem').value = rosterData.remaining || '';
+  buildDaysList();
+}
+
+function getWd(d) {
+  // March 2026: 1st is Sunday
+  const date = new Date(2026, 2, d);
+  return WDS[date.getDay()];
+}
+
+function buildDaysList() {
+  const list = document.getElementById('daysList');
+  list.innerHTML = '';
+  for (let d=1;d<=31;d++) {
+    const info = rosterData.days[d];
+    const row = document.createElement('div');
+    row.className = 'day-row';
+    let icon = '➕', desc = 'Vuoto — tocca per aggiungere';
+    if (info) {
+      if (info.type==='off') { icon='🏠'; desc='Giorno OFF'; }
+      else if (info.type==='offr') { icon='🏠'; desc='OFF su richiesta'; }
+      else if (info.type==='layover') { icon='🏨'; desc=`Layover ${info.city||''}`; }
+      else if (info.type==='dh') { icon='🚂'; desc=`DH ${info.flights?.[0]?.dep||''}→${info.flights?.[0]?.arr||''}`; }
+      else if (info.type==='flight') { icon='✈️'; desc=`${info.flights?.[0]?.dep||''}→${info.flights?.[0]?.arr||''} ${info.flights?.[0]?.etd||''}`; }
+    }
+    row.innerHTML = `
+      <div>
+        <div class="dr-date">${d} Mar · ${WD_NAMES[getWd(d)]||''}</div>
+        <div class="dr-info">${desc}</div>
+      </div>
+      <div class="dr-icon">${icon}</div>
+    `;
+    row.addEventListener('click', ()=>openEdit(d));
+    list.appendChild(row);
+  }
+}
+
+function openEdit(d) {
+  editingDay = d;
+  document.getElementById('editTitle').textContent = `${d} Marzo`;
+  const info = rosterData.days[d] || {};
+  document.getElementById('eType').value = info.type || '';
+  document.getElementById('eCkin').value = info.ckin || '';
+  document.getElementById('eCity').value = info.city || '';
+  if (info.flights && info.flights[0]) {
+    const f = info.flights[0];
+    document.getElementById('eFN').value = f.fn || '';
+    document.getElementById('eDep').value = f.dep || '';
+    document.getElementById('eArr').value = f.arr || '';
+    document.getElementById('eEtd').value = f.etd || '';
+    document.getElementById('eEta').value = f.eta || '';
+    document.getElementById('eFh').value = f.fh || '';
+    document.getElementById('eNote').value = f.note || '';
+  } else {
+    ['eFN','eDep','eArr','eEtd','eEta','eFh','eNote'].forEach(id=>document.getElementById(id).value='');
+  }
+  document.getElementById('eHtl').value = info.htl ? 'true' : 'false';
+  toggleFields();
+  document.getElementById('editModal').classList.add('open');
+}
+
+function toggleFields() {
+  const t = document.getElementById('eType').value;
+  document.getElementById('flightFields').style.display = (t==='flight'||t==='dh') ? 'block' : 'none';
+  document.getElementById('layoverFields').style.display = t==='layover' ? 'block' : 'none';
+}
+
+function saveDay() {
+  const t = document.getElementById('eType').value;
+  const d = editingDay;
+  if (!t) { delete rosterData.days[d]; }
+  else {
+    const wd = getWd(d);
+    let entry = { type:t, wd };
+    if (t==='flight'||t==='dh') {
+      entry.ckin = document.getElementById('eCkin').value;
+      entry.htl = document.getElementById('eHtl').value === 'true';
+      entry.flights = [{
+        fn: document.getElementById('eFN').value,
+        dep: document.getElementById('eDep').value.toUpperCase(),
+        arr: document.getElementById('eArr').value.toUpperCase(),
+        etd: document.getElementById('eEtd').value,
+        eta: document.getElementById('eEta').value,
+        fh: document.getElementById('eFh').value,
+        note: document.getElementById('eNote').value,
+        dh: t==='dh'
+      }];
+    } else if (t==='layover') {
+      entry.city = document.getElementById('eCity').value;
+      entry.htl = true;
+    }
+    rosterData.days[d] = entry;
+  }
+  closeEdit();
+  buildDaysList();
+  markChanged();
+}
+
+function clearDay() {
+  delete rosterData.days[editingDay];
+  closeEdit();
+  buildDaysList();
+  markChanged();
+}
+
+function closeEdit() {
+  document.getElementById('editModal').classList.remove('open');
+}
+
+function markChanged() {
+  hasChanges = true;
+  document.getElementById('saveBar').style.display = 'block';
+}
+
+async function saveRoster() {
+  const btn = document.querySelector('.save-btn-main');
+  btn.textContent = '💾 Salvataggio...';
+  btn.disabled = true;
+  rosterData.month = document.getElementById('fMonth').value;
+  rosterData.fh = document.getElementById('fFH').value;
+  rosterData.off = document.getElementById('fOff').value;
+  rosterData.remaining = document.getElementById('fRem').value;
+  rosterData.updated = new Date().toLocaleDateString('it-IT', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  try {
+    await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+      method: 'PUT',
+      headers: { 'Content-Type':'application/json', 'X-Access-Key': API_KEY },
+      body: JSON.stringify(rosterData)
+    });
+    btn.textContent = '✅ Salvato!';
+    hasChanges = false;
+    setTimeout(()=>{ document.getElementById('saveBar').style.display='none'; btn.textContent='💾 Salva Roster su Cloud'; btn.disabled=false; }, 2000);
+  } catch(e) {
+    btn.textContent = '❌ Errore — riprova';
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>
