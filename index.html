@@ -21,12 +21,20 @@
   --accent2: #0d9488;
   --warn: #ea6c1a;
   --danger: #dc2626;
-  --off: #dcf5e0;
-  --off-text: #166534;
+  --off: #e8f5e9;
+  --off-text: #2e7d32;
+  --offr: #ede7f6;
+  --offr-text: #6a1b9a;
   --text: #1a2030;
   --muted: #5a6680;
-  --layover: #dbeafe;
-  --dh: #d1fae5;
+  --layover: #e3f2fd;
+  --layover-border: #90caf9;
+  --dh: #e8f8f5;
+  --dh-border: #80cbc4;
+  --flight: #fff8f0;
+  --flight-border: #ffb74d;
+  --ufficio: #fff9c4;
+  --ufficio-border: #f9a825;
   --changed: #fef9c3;
   --safe-top: env(safe-area-inset-top);
   --safe-bottom: env(safe-area-inset-bottom);
@@ -62,21 +70,19 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
 .cday { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:6px 4px; min-height:72px; cursor:pointer; position:relative; overflow:hidden; }
 .cday:active { opacity:0.7; }
 .cday.empty { background:transparent; border-color:transparent; cursor:default; }
-.cday.is-off { background:var(--off); border-color:#bbf7c8; }
-.cday.is-layover { background:var(--layover); border-color:#bfdbfe; }
-.cday.is-dh { background:var(--dh); border-color:#a7f3d0; }
+.cday.is-flight { background:var(--flight); border-color:var(--flight-border); }
+.cday.is-off { background:var(--off); border-color:#a5d6a7; }
+.cday.is-offr { background:var(--offr); border-color:#ce93d8; }
+.cday.is-layover { background:var(--layover); border-color:var(--layover-border); }
+.cday.is-dh { background:var(--dh); border-color:var(--dh-border); }
+.cday.is-ufficio { background:var(--ufficio); border-color:var(--ufficio-border); }
 .cday.is-today { border-color:var(--accent) !important; border-width:2px; }
 .cday.is-changed { background:var(--changed) !important; border-color:#fbbf24 !important; }
 .cday-num { font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:700; color:var(--muted); margin-bottom:3px; }
 .cday-route { font-family:'IBM Plex Mono',monospace; font-size:9px; font-weight:700; color:var(--text); line-height:1.4; }
 .cday-icon { position:absolute; bottom:4px; right:4px; font-size:11px; }
-.cday.is-overnight-start { position:relative; }
-.cday.is-overnight-start::after { content:''; position:absolute; bottom:0; right:-3px; width:3px; height:100%; background:var(--accent); z-index:2; }
-.cday.is-overnight-end { position:relative; }
-.cday.is-overnight-end::before { content:''; position:absolute; bottom:0; left:-3px; width:3px; height:100%; background:var(--accent); z-index:2; }
-/* Overnight bar connecting cells */
-.cday.is-overnight-start { background: linear-gradient(to right, var(--surface), #dbeafe) !important; border-right-color: var(--accent) !important; }
-.cday.is-overnight-end { background: linear-gradient(to right, #dbeafe, var(--surface)) !important; border-left-color: var(--accent) !important; }
+.cday.is-overnight-start { border-right:2px solid var(--accent) !important; background:linear-gradient(to right, var(--flight), #dbeafe) !important; }
+.cday.is-overnight-end { border-left:2px solid var(--accent) !important; background:linear-gradient(to left, var(--flight), #dbeafe) !important; }
 
 /* LIST */
 .view { display:none; padding:0 16px; }
@@ -234,16 +240,20 @@ let previousDays = {};
 let changes = [];
 
 function typeClass(t) {
-  if (t==='off'||t==='offr') return 'is-off';
+  if (t==='off') return 'is-off';
+  if (t==='offr') return 'is-offr';
   if (t==='layover') return 'is-layover';
   if (t==='dh') return 'is-dh';
+  if (t==='ufficio') return 'is-ufficio';
   return 'is-flight';
 }
 
 function dayIcon(info) {
   if (!info) return '';
-  if (info.type==='off'||info.type==='offr') return '🏠';
+  if (info.type==='off') return '🏠';
+  if (info.type==='offr') return '🏠';
   if (info.type==='dh') return '🚂';
+  if (info.type==='ufficio') return '📋';
   if (info.htl) return '🟡';
   return '';
 }
@@ -266,16 +276,31 @@ function buildCalendar(days, changedDays) {
     if (changedDays && changedDays.includes(d)) cls += ' is-changed';
     cell.className = cls;
 
+    // Overnight detection
+    const hasOpenEnd = info && info.flights && info.flights.some(f => f.arr==='···');
+    const isCont = info && info.flights && info.flights.some(f => f.cont);
+    if (hasOpenEnd) cls += ' is-overnight-start';
+    if (isCont) cls += ' is-overnight-end';
+    cell.className = cls;
+
     let route = '';
     if (info && info.flights && info.flights[0]) {
       const f = info.flights[0];
-      route = `<div class="cday-route">${f.dep||''}<br>${f.arr||''}</div>`;
+      if (hasOpenEnd) {
+        // Show only DEP, arrival is next day
+        route = `<div class="cday-route">${f.dep||''}<br><span style="color:var(--accent);font-size:8px">▸${d+1}</span></div>`;
+      } else if (isCont) {
+        // Show only ARR, departure was previous day
+        route = `<div class="cday-route"><span style="color:var(--accent);font-size:8px">${d-1}▸</span><br>${f.arr||''}</div>`;
+      } else {
+        route = `<div class="cday-route">${f.dep||''}<br>${f.arr||''}</div>`;
+      }
     } else if (info && (info.type==='off'||info.type==='offr')) {
-      route = `<div class="cday-route" style="color:var(--off-text);font-size:13px">🏠</div>`;
+      route = ''; // solo icona
     } else if (info && info.type==='layover') {
-      route = `<div class="cday-route" style="font-size:9px;color:#3b82f6;letter-spacing:-0.02em">${info.city||'LAY'}</div>`;
-    } else if (info && info.type==='dh') {
-      route = `<div class="cday-route" style="font-size:13px">🚂</div>`;
+      route = `<div class="cday-route" style="font-size:9px;color:#1565c0">${info.city||'LAY'}</div>`;
+    } else if (info && (info.type==='dh'||info.type==='ufficio')) {
+      route = ''; // solo icona
     }
 
     cell.innerHTML = `<div class="cday-num">${d}</div>${route}<div class="cday-icon">${info ? dayIcon(info) : ''}</div>`;
