@@ -100,6 +100,14 @@ select.input{appearance:none;}
     <div class="field"><label>Remaining</label><input class="input" id="fRem" placeholder="es. -3"></div>
   </div>
 
+  <div class="section-title">Importa PDF Neos</div>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:4px;">
+    <div style="font-size:14px;color:var(--muted);margin-bottom:12px;">Carica il PDF del roster — i giorni vengono compilati automaticamente.</div>
+    <input type="file" id="pdfInput" accept="application/pdf" style="display:none" onchange="importPDF(event)">
+    <button class="btn" style="background:var(--warn)" onclick="document.getElementById('pdfInput').click()">📄 Scegli PDF Roster Neos</button>
+    <div id="importStatus" style="margin-top:10px;font-size:13px;color:var(--muted);display:none"></div>
+  </div>
+
   <div class="section-title">Giorni del mese</div>
   <div id="daysList"></div>
 
@@ -317,6 +325,176 @@ function closeEdit() {
 function markChanged() {
   hasChanges = true;
   document.getElementById('saveBar').style.display = 'block';
+}
+
+async function importPDF(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const status = document.getElementById('importStatus');
+  status.style.display = 'block';
+  status.textContent = '⏳ Lettura PDF in corso...';
+
+  try {
+    // Load PDF.js from CDN
+    if (!window.pdfjsLib) {
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let fullText = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const tc = await page.getTextContent();
+      fullText += tc.items.map(it => it.str).join(' ') + '\n';
+    }
+
+    const result = parseNeosRoster(fullText);
+    if (result.daysFound === 0) {
+      status.textContent = '⚠️ Nessun giorno trovato. Verifica che sia un roster Neos valido.';
+      return;
+    }
+
+    // Merge into rosterData
+    rosterData.days = result.days;
+    if (result.month) { rosterData.month = result.month; document.getElementById('fMonth').value = result.month; }
+    if (result.fh) { rosterData.fh = result.fh; document.getElementById('fFH').value = result.fh; }
+    if (result.off) { rosterData.off = result.off; document.getElementById('fOff').value = result.off; }
+    if (result.remaining) { rosterData.remaining = result.remaining; document.getElementById('fRem').value = result.remaining; }
+
+    buildDaysList();
+    markChanged();
+    status.style.color = 'var(--accent2)';
+    status.textContent = `✅ Importati ${result.daysFound} giorni! Controlla e salva.`;
+  } catch(e) {
+    status.style.color = 'var(--danger)';
+    status.textContent = '❌ Errore lettura PDF: ' + e.message;
+  }
+  // Reset input
+  event.target.value = '';
+}
+
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = src; s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+}
+
+function parseNeosRoster(text) {
+  const days = {};
+  let daysFound = 0;
+  let month = '', fh = '', off = '', remaining = '';
+
+  // Extract month from "From DD/MM/YYYY to DD/MM/YYYY"
+  const monthMatch = text.match(/From\s+(\d{2}\/\d{2}\/(\d{4}))/);
+  if (monthMatch) {
+    const months = ['','Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+    const parts = monthMatch[1].split('/');
+    month = months[parseInt(parts[1])] + ' ' + parts[2];
+  }
+
+  // Extract flight hours
+  const fhMatch = text.match(/Flight Hours[^\d]*(\d+\.\d+)/);
+  if (fhMatch) fh = fhMatch[1].replace('.', ':');
+
+  // Extract Day OFF count
+  const offMatch = text.match(/Day OFF[^\d]*Month[^\d]*(\d+)/);
+  if (offMatch) off = offMatch[1];
+
+  // Extract remaining
+  const remMatch = text.match(/Remaining[^\d-]*(-?\d+)/);
+  if (remMatch) remaining = remMatch[1];
+
+  const WDS = ['dom','lun','mar','mer','gio','ven','sab'];
+
+  // Split text into lines and parse day by day
+  const lines = text.split(/\n/);
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // Match date pattern DD/MM/YYYY
+    const dateMatch = line.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+    if (!dateMatch) continue;
+
+    const day = parseInt(dateMatch[1]);
+    if (day < 1 || day > 31) continue;
+
+    const date = new Date(parseInt(dateMatch[3]), parseInt(dateMatch[2])-1, day);
+    const wd = WDS[date.getDay()];
+
+    const rest = line + ' ' + (lines[i+1] || '') + ' ' + (lines[i+2] || '');
+
+    // LAYOVER
+    if (/LAYOVER/i.test(rest)) {
+      days[day] = { type: 'layover', wd, htl: true };
+      daysFound++;
+      continue;
+    }
+
+    // OFF(R)
+    if (/OFF\(R\)/.test(rest)) {
+      days[day] = { type: 'offr', wd };
+      daysFound++;
+      continue;
+    }
+
+    // OFF
+    if (/\bOFF\b/.test(rest) && !/LAYOVER|\d{3,4}/.test(rest)) {
+      days[day] = { type: 'off', wd };
+      daysFound++;
+      continue;
+    }
+
+    // Flight number pattern: 2-4 digits or NO+digits
+    const flightMatch = rest.match(/\b(NO\d+|\d{3,4})\s+([A-Z]{3})\s+([>A-Z]{3})\s+(\d{2}:\d{2})?\s*(\d{2}:\d{2})?/);
+    if (flightMatch) {
+      const fn = flightMatch[1];
+      const dep = flightMatch[2];
+      const arr = flightMatch[3] === '>' ? '···' : flightMatch[3];
+      const etd = flightMatch[4] || '';
+      const eta = flightMatch[5] || '';
+
+      // Check if DH
+      const isDH = /\bDH\b/.test(rest);
+
+      // Extract FH
+      const fhMatch2 = rest.match(/(\d+\.\d+)/);
+      const fh2 = fhMatch2 ? fhMatch2[1].replace('.', ':') : '';
+
+      // Extract ckin
+      const ckinMatch = line.match(/(\d{2}:\d{2})\s*$/);
+      const ckin = ckinMatch ? ckinMatch[1] : '';
+
+      // Hotel
+      const htl = /HTL/.test(rest);
+
+      days[day] = {
+        type: isDH ? 'dh' : 'flight',
+        wd,
+        ckin,
+        htl,
+        flights: [{ fn, dep, arr, etd, eta, fh: fh2, dh: isDH }]
+      };
+      daysFound++;
+      continue;
+    }
+
+    // DH without flight number (train/bus)
+    if (/\bDH\b/.test(rest)) {
+      const depMatch = rest.match(/([A-Z]{3})\s+([A-Z]{3})/);
+      days[day] = {
+        type: 'dh', wd, htl: /HTL/.test(rest),
+        flights: depMatch ? [{ dep: depMatch[1], arr: depMatch[2], dh: true }] : []
+      };
+      daysFound++;
+    }
+  }
+
+  return { days, daysFound, month, fh, off, remaining };
 }
 
 async function saveRoster() {
