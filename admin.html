@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Roster Admin v3</title>
+<title>Roster Admin</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -405,17 +405,18 @@ function parseNeosRoster(text) {
   if (offM) offCount = offM[1];
   const remM = text.match(/Remaining\s+(-?\d+)/i);
   if (remM) remaining = remM[1];
-  const targetMonth = mMatch ? parseInt(mMatch[2]) : 0;
+  const targetMonth = mMatch ? parseInt(mMatch[2], 10) : 3; // default March
 
   const chunks = text.split(/(?=\b\d{2}\/\d{2}\/\d{4}\b)/);
+  console.log('targetMonth:', targetMonth, 'chunks:', chunks.length);
 
   // First pass: collect all raw chunks per day
   const rawChunks = {};
   for (const chunk of chunks) {
-    const dm = chunk.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(su|mo|tu|we|th|fr|sa)\s+([\s\S]*)/i);
+    const dm = chunk.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(su|mo|tu|we|th|fr|sa)\b\s*([\s\S]*)/i);
     if (!dm) continue;
     const day = parseInt(dm[1]), mo = parseInt(dm[2]);
-    if (mo !== targetMonth) continue;
+    if (parseInt(mo,10) !== parseInt(targetMonth,10)) continue;
     rawChunks[day] = { wd: DAY_ABB[dm[4]]||dm[4], rest: dm[5]||'' };
   }
 
