@@ -74,7 +74,7 @@ select.input{appearance:none;}
 <body>
 
 <div class="topbar">
-  <h1>⚙ ROSTER ADMIN <span style="font-size:10px;opacity:0.6;font-weight:400">v4.3</span></h1>
+  <h1>⚙ ROSTER ADMIN <span style="font-size:10px;opacity:0.6;font-weight:400">v4.4</span></h1>
   <a href="index.html" class="back-btn">← Roster</a>
 </div>
 
@@ -494,7 +494,7 @@ function parseNeosRoster(text) {
 
 function extractFlights(rest, SKIP) {
   const flights = [];
-  const segRe = /(?:(NO\d+|AZ\d+|\d{3,4})\s+)?([A-Z]{3})\s+([A-Z>]{3})\s+(\d{2}:\d{2})\s*(\d{2}:\d{2})?\s*(\d{2}[.,]\d{2})?/g;
+  const segRe = /(?:(NO\d+|AZ\d+|\d{3,4})\s+)?([A-Z]{3})\s+([A-Z]{3}|>)\s+(\d{2}:\d{2})\s*(\d{2}:\d{2})?\s*(\d{2}[.,]\d{2})?/g;
   let m;
   while ((m = segRe.exec(rest)) !== null) {
     const fn=m[1]||'', dep=m[2], arr=m[3], etd=m[4], eta=m[5]||'';
@@ -512,7 +512,7 @@ function parseFlightSegments(rest, skipFirst) {
   const flights = [];
   const SKIP = new Set(['DEP','ARR','ETD','ETA','FH','DH','HTL']);
 
-  const segRe = /(?:(NO\d+|AZ\d+|\d{3,4})\s+)?([A-Z]{3})\s+([A-Z>]{3})\s+(\d{2}:\d{2})\s*(\d{2}:\d{2})?\s*(\d{2}[.,]\d{2})?/g;
+  const segRe = /(?:(NO\d+|AZ\d+|\d{3,4})\s+)?([A-Z]{3})\s+([A-Z]{3}|>)\s+(\d{2}:\d{2})\s*(\d{2}:\d{2})?\s*(\d{2}[.,]\d{2})?/g;
   let m;
   let skipped = false;
   while ((m = segRe.exec(rest)) !== null) {
