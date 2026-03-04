@@ -390,17 +390,13 @@ function loadScript(src) {
 }
 
 function parseNeosRoster(text) {
-  // PDF.js on iOS extracts as one long string with spaces between tokens
-  // Strategy: split into chunks at each date boundary
-
   const WDS = ['dom','lun','mar','mer','gio','ven','sab'];
   const DAY_ABB = {su:'dom',mo:'lun',tu:'mar',we:'mer',th:'gio',fr:'ven',sa:'sab'};
   const MNAMES = ['','Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
-
-  let fhTotal = '', offCount = '', remaining = '', month = '';
+  const SKIP = new Set(['DEP','ARR','ETD','ETA','FH','DH','HTL','MXP']);
+  let fhTotal='', offCount='', remaining='', month='';
   const days = {};
 
-  // Extract stats
   const mMatch = text.match(/From\s+(\d{2})\/(\d{2})\/(\d{4})/);
   if (mMatch) month = MNAMES[parseInt(mMatch[2])] + ' ' + mMatch[3];
   const fhM = text.match(/(\d{2}[.,]\d{2})\s+0\s+00[.,]00/);
@@ -409,92 +405,81 @@ function parseNeosRoster(text) {
   if (offM) offCount = offM[1];
   const remM = text.match(/Remaining\s+(-?\d+)/i);
   if (remM) remaining = remM[1];
-
-  // Determine which month we're parsing
   const targetMonth = mMatch ? parseInt(mMatch[2]) : 0;
 
-  // Split into per-day chunks at each date
   const chunks = text.split(/(?=\b\d{2}\/\d{2}\/\d{4}\b)/);
 
-  // We need to track overnight flights that continue next day
-  // ">" as ARR means flight continues to next chunk
-  let pendingContinuation = null; // {arr, eta, fh} to patch into next day
-
-  for (let ci = 0; ci < chunks.length; ci++) {
-    const chunk = chunks[ci].trim();
-    if (!chunk) continue;
-
-    const dm = chunk.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(su|mo|tu|we|th|fr|sa)\s+([\s\S]*)/i);
+  // First pass: collect all raw chunks per day
+  const rawChunks = {};
+  for (const chunk of chunks) {
+    const dm = chunk.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(su|mo|tu|we|th|fr|sa)\s+([\s\S]*)/i);
     if (!dm) continue;
-
-    const day = parseInt(dm[1]);
-    const mo = parseInt(dm[2]);
-    const wd = DAY_ABB[dm[4]] || dm[4];
-    const rest = dm[5] || '';
-
-    // Only parse target month
+    const day = parseInt(dm[1]), mo = parseInt(dm[2]);
     if (mo !== targetMonth) continue;
+    rawChunks[day] = { wd: DAY_ABB[dm[4]]||dm[4], rest: dm[5]||'' };
+  }
 
-    // Handle pending continuation from previous night
-    if (pendingContinuation) {
-      const contM = rest.match(/^[.\s]*>\s+([A-Z]{3})\s+(\d{2}:\d{2})\s*(\d{2}[.,]\d{2})?/);
-      if (contM) {
-        pendingContinuation.arr = contM[1];
-        pendingContinuation.eta = contM[2];
-        if (contM[3]) pendingContinuation.fh = contM[3].replace('.', ':').replace(',', ':');
-        // htl for this day
-        const htlThis = /\bHTL\b/.test(rest);
-        // ckin for this day (dots + time after the continuation)
-        const afterCont = rest.substring(rest.indexOf(contM[0]) + contM[0].length);
-        const ckinM2 = afterCont.match(/\.{3,}\s+(\d{2}:\d{2})/);
-        // This day is a continuation - treat as flight day
-        // The previous day's entry already exists, just needs arr/eta patched
-        // Actually previous day entry already has dh/flight type, we patched above
-        // Now this day: check if there are MORE flights after continuation
-        const remainingRest = rest;
-        // Parse additional flights for this day
-        const extraFlights = parseFlightSegments(remainingRest, true);
-        const ckinThis = (() => { const c = remainingRest.match(/\.{3,}\s+(\d{2}:\d{2})/); return c ? c[1] : ''; })();
-        const htlFinal = /\bHTL\b/.test(remainingRest);
-        if (extraFlights.length > 0) {
-          const allDH = extraFlights.every(f => f.dh);
-          days[day] = {type: allDH?'dh':'flight', wd, ckin:ckinThis, htl:htlFinal, flights:extraFlights};
-        } else {
-          days[day] = {type:'flight', wd, ckin:ckinThis, htl:htlFinal, flights:[]};
-        }
-        pendingContinuation = null;
-        continue;
-      }
-      pendingContinuation = null;
-    }
+  for (let day = 1; day <= 31; day++) {
+    const rc = rawChunks[day];
+    if (!rc) continue;
+    const { wd, rest } = rc;
 
     // LAYOVER
     if (/\bLAYOVER\b/i.test(rest)) {
-      days[day] = {type:'layover', wd, htl:true, city:''};
-      continue;
+      days[day] = {type:'layover', wd, htl:true, city:''}; continue;
     }
     // OFF(R)
     if (/OFF\(R\)/i.test(rest)) {
-      days[day] = {type:'offr', wd};
-      continue;
+      days[day] = {type:'offr', wd}; continue;
     }
     // OFF
     if (/\bOFF\b/i.test(rest) && !/[A-Z]{3}\s+[A-Z>]{3}\s+\d{2}:\d{2}/.test(rest)) {
-      days[day] = {type:'off', wd};
+      days[day] = {type:'off', wd}; continue;
+    }
+
+    const ckin = (() => { const c = rest.match(/\.{3,}\s+(\d{2}:\d{2})/); return c?c[1]:''; })();
+    const htl = /\bHTL\b/.test(rest);
+
+    // Check if this day is a continuation day (starts with > ARR ETA)
+    const isCont = /^[.\s]*>\s+[A-Z]{3}\s+\d{2}:\d{2}/.test(rest);
+
+    if (isCont) {
+      // Extract arrival info
+      const contM = rest.match(/^[.\s]*>\s+([A-Z]{3})\s+(\d{2}:\d{2})\s*(\d{2}[.,]\d{2})?/);
+      // Patch previous day's last open flight
+      const prevDay = days[day-1];
+      if (prevDay && prevDay.flights && prevDay.flights.length > 0) {
+        const lf = prevDay.flights[prevDay.flights.length-1];
+        if (lf.arr === '···' || lf.arr === '>') {
+          lf.arr = contM ? contM[1] : '?';
+          lf.eta = contM ? contM[2] : '';
+          if (contM && contM[3]) lf.fh = contM[3].replace('.', ':').replace(',', ':');
+        }
+      }
+      // This day itself: check if more flights follow the continuation
+      const afterCont = contM ? rest.substring(rest.indexOf(contM[0]) + contM[0].length) : rest;
+      const extraFlights = extractFlights(afterCont, SKIP);
+      const ckin2 = (() => { const c = afterCont.match(/\.{3,}\s+(\d{2}:\d{2})/); return c?c[1]:''; })();
+      const htl2 = /\bHTL\b/.test(afterCont);
+      if (extraFlights.length > 0) {
+        const allDH = extraFlights.every(f => f.dh);
+        days[day] = {type: allDH?'dh':'flight', wd, ckin:ckin2, htl:htl2, flights:extraFlights};
+      } else {
+        // Continuation-only day: arrival of previous night's flight
+        const arrIATA = contM ? contM[1] : '?';
+        const prevFl = (days[day-1]&&days[day-1].flights) ? days[day-1].flights[days[day-1].flights.length-1] : null;
+        days[day] = {type:'flight', wd, ckin:ckin2, htl:htl2, flights: prevFl ? [{
+          fn: prevFl.fn, dep: prevFl.dep, arr: arrIATA,
+          etd: prevFl.etd, eta: contM?contM[2]:'',
+          fh: (contM&&contM[3])?contM[3].replace('.', ':').replace(',', ':'):'',
+          dh: prevFl.dh, cont: true
+        }] : []};
+      }
       continue;
     }
 
-    const ckin = (() => { const c = rest.match(/\.{3,}\s+(\d{2}:\d{2})/); return c ? c[1] : ''; })();
-    const htl = /\bHTL\b/.test(rest);
-    const flights = parseFlightSegments(rest, false);
-
-    // Check for open-ended flight ("> " as arr = overnight, will continue next day)
-    const openFlight = flights.find(f => f.arr === '>');
-    if (openFlight) {
-      openFlight.arr = '···'; // placeholder
-      pendingContinuation = openFlight;
-    }
-
+    // Normal day with flights
+    const flights = extractFlights(rest, SKIP);
     if (flights.length > 0) {
       const allDH = flights.every(f => f.dh);
       days[day] = {type: allDH?'dh':'flight', wd, ckin, htl, flights};
@@ -504,6 +489,22 @@ function parseNeosRoster(text) {
   }
 
   return { days, daysFound: Object.keys(days).length, month, fh: fhTotal, off: offCount, remaining };
+}
+
+function extractFlights(rest, SKIP) {
+  const flights = [];
+  const segRe = /(?:(NO\d+|AZ\d+|\d{3,4})\s+)?([A-Z]{3})\s+([A-Z>]{3})\s+(\d{2}:\d{2})\s*(\d{2}:\d{2})?\s*(\d{2}[.,]\d{2})?/g;
+  let m;
+  while ((m = segRe.exec(rest)) !== null) {
+    const fn=m[1]||'', dep=m[2], arr=m[3], etd=m[4], eta=m[5]||'';
+    const fh=(m[6]||'').replace('.', ':').replace(',', ':');
+    if (SKIP.has(dep)||SKIP.has(arr)) continue;
+    const after = rest.substring(m.index+m[0].length, m.index+m[0].length+25);
+    const before = rest.substring(Math.max(0,m.index-5), m.index);
+    const isDH = /\bDH\b/.test(after)||/\bDH\b/.test(before);
+    flights.push({fn, dep, arr: arr==='>'?'···':arr, etd, eta, fh, dh:isDH});
+  }
+  return flights;
 }
 
 function parseFlightSegments(rest, skipFirst) {
