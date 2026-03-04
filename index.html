@@ -10,22 +10,22 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>FlightRoster</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0a0d14;
-    --surface: #111520;
-    --surface2: #161c2e;
-    --border: #1e2740;
-    --accent: #3d7fff;
-    --accent2: #00d4aa;
-    --warn: #ff8c42;
-    --off: #1e2a1e;
-    --off-text: #4caf50;
-    --text: #e8eaf0;
-    --muted: #6b7a9e;
-    --layover: #1a2a4a;
-    --dh: #1a3a2a;
+    --bg: #2c3340;
+    --surface: #363d4e;
+    --surface2: #404859;
+    --border: #4a5268;
+    --accent: #5b9cf6;
+    --accent2: #2dd4aa;
+    --warn: #fb923c;
+    --off: #2d3d2d;
+    --off-text: #6ee07a;
+    --text: #f0f2f7;
+    --muted: #9aa3b8;
+    --layover: #2a3a5a;
+    --dh: #253a2e;
     --safe-top: env(safe-area-inset-top);
     --safe-bottom: env(safe-area-inset-bottom);
   }
@@ -35,7 +35,7 @@
   body {
     background: var(--bg);
     color: var(--text);
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'IBM Plex Sans', sans-serif;
     min-height: 100vh;
     padding-bottom: calc(80px + var(--safe-bottom));
     overscroll-behavior: none;
@@ -58,7 +58,7 @@
   }
 
   .topbar h1 {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 13px;
     letter-spacing: 0.1em;
     color: var(--accent);
@@ -67,7 +67,7 @@
   .topbar .month {
     font-size: 12px;
     color: var(--muted);
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
   }
 
   /* STATS ROW */
@@ -92,7 +92,7 @@
   }
 
   .stat .sv {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 18px;
     font-weight: 700;
     color: var(--accent);
@@ -149,7 +149,7 @@
   }
 
   .cal-header-row div {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 9px;
     color: var(--muted);
     text-align: center;
@@ -182,7 +182,7 @@
   .cday.is-today { border-color: var(--accent) !important; border-width: 2px; }
 
   .cday-num {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 11px;
     font-weight: 700;
     color: var(--muted);
@@ -190,7 +190,7 @@
   }
 
   .cday-route {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 9px;
     font-weight: 700;
     color: var(--text);
@@ -238,14 +238,14 @@
   }
 
   .di-date {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 12px;
     color: var(--muted);
   }
 
   .di-badge {
     font-size: 9px;
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     padding: 2px 8px;
     border-radius: 10px;
     font-weight: 700;
@@ -258,7 +258,7 @@
   .badge-layover { background: rgba(96,144,255,0.15); color: #6090ff; }
 
   .di-route {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 18px;
     font-weight: 700;
     color: var(--text);
@@ -270,13 +270,13 @@
   .di-times {
     font-size: 12px;
     color: var(--muted);
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
   }
 
   .di-fh {
     font-size: 12px;
     color: var(--accent2);
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     margin-top: 4px;
   }
 
@@ -309,7 +309,7 @@
   }
 
   .doc-exp {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 12px;
     color: var(--muted);
   }
@@ -354,7 +354,7 @@
   }
 
   .modal-date-label {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 11px;
     color: var(--muted);
     letter-spacing: 0.15em;
@@ -379,7 +379,7 @@
 
   .modal-row:last-child { border-bottom: none; }
   .modal-row .k { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }
-  .modal-row .v { font-family: 'Space Mono', monospace; font-weight: 700; text-align: right; }
+  .modal-row .v { font-family: 'IBM Plex Mono', monospace; font-weight: 700; text-align: right; }
   .modal-row .v.blue { color: var(--accent); }
   .modal-row .v.green { color: var(--accent2); }
   .modal-row .v.orange { color: var(--warn); }
@@ -409,7 +409,7 @@
     cursor: pointer;
     padding: 4px 0;
     font-size: 10px;
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'IBM Plex Sans', sans-serif;
     transition: color 0.15s;
   }
 
