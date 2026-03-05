@@ -158,7 +158,7 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
 <body>
 
 <div class="topbar">
-  <h1>✈ FLIGHTROSTER <span style="font-size:10px;opacity:0.5;font-weight:400">v1.8</span></h1>
+  <h1>✈ FLIGHTROSTER <span style="font-size:10px;opacity:0.5;font-weight:400">v1.9</span></h1>
   <div style="display:flex;align-items:center;gap:6px">
     <button onclick="prevMonth()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:14px;cursor:pointer;color:var(--muted)">‹</button>
     <select id="monthSelect" onchange="switchMonth(this.value)" style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);border:1px solid var(--border);border-radius:6px;padding:3px 6px;background:var(--surface);cursor:pointer">
@@ -442,7 +442,16 @@ async function loadRoster() {
       headers: { 'X-Access-Key': API_KEY }
     });
     const data = await res.json();
-    allRosters = data.record || {};
+    const record = data.record || {};
+
+    // Handle legacy format (single roster) vs new multi-month format
+    if (record.days) {
+      // Legacy: convert to multi-month
+      const mk = record.month ? legacyMonthKey(record.month) : '2026-03';
+      allRosters = { [mk]: record };
+    } else {
+      allRosters = record;
+    }
 
     // Build month selector
     const keys = Object.keys(allRosters).filter(k => k.match(/^\d{4}-\d{2}$/)).sort();
@@ -505,6 +514,16 @@ function displayMonth(key) {
   buildCalendar(currentDays, changedDays, roster);
   buildList(currentDays, changedDays, roster);
   buildChanges(changes);
+}
+
+function legacyMonthKey(monthStr) {
+  const months = {gen:'01',feb:'02',mar:'03',apr:'04',mag:'05',giu:'06',
+                  lug:'07',ago:'08',set:'09',ott:'10',nov:'11',dic:'12'};
+  if (!monthStr) return '2026-03';
+  const parts = monthStr.toLowerCase().split(' ');
+  const m = months[parts[0].substring(0,3)] || '03';
+  const y = parts[1] || '2026';
+  return `${y}-${m}`;
 }
 
 function switchMonth(key) {
