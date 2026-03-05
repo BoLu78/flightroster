@@ -382,6 +382,18 @@ async function importPDF(event) {
     buildDaysList();
     markChanged();
 
+    // Auto-save immediately so cloud is updated
+    rosterData.month = document.getElementById('fMonth').value;
+    rosterData.fh = document.getElementById('fFH').value;
+    rosterData.off = document.getElementById('fOff').value;
+    rosterData.remaining = document.getElementById('fRem').value;
+    rosterData.updated = new Date().toLocaleDateString('it-IT', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+      method: 'PUT',
+      headers: { 'Content-Type':'application/json', 'X-Access-Key': API_KEY },
+      body: JSON.stringify(rosterData)
+    });
+
     // Build comparison message
     let diffMsg = `✅ Importati ${result.daysFound} giorni!`;
     const diffs = [];
