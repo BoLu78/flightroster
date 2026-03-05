@@ -158,7 +158,7 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
 <body>
 
 <div class="topbar">
-  <h1>✈ FLIGHTROSTER <span style="font-size:10px;opacity:0.5;font-weight:400">v2.0</span></h1>
+  <h1>✈ FLIGHTROSTER <span style="font-size:10px;opacity:0.5;font-weight:400">v2.1</span></h1>
   <div style="display:flex;align-items:center;gap:6px">
     <button onclick="prevMonth()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:14px;cursor:pointer;color:var(--muted)">‹</button>
     <select id="monthSelect" onchange="switchMonth(this.value)" style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);border:1px solid var(--border);border-radius:6px;padding:3px 6px;background:var(--surface);cursor:pointer">
@@ -443,27 +443,7 @@ async function loadRoster() {
     });
     const data = await res.json();
     const record = data.record || {};
-
-    // Handle legacy format (single roster) vs new multi-month format
-    if (record.days) {
-      // Legacy: convert to multi-month
-      const mk = record.month ? legacyMonthKey(record.month) : '2026-03';
-      allRosters = { [mk]: record };
-    } else if (record && typeof record === 'object') {
-      // Check if any key has a days property (multi-month format)
-      const hasMonthKeys = Object.keys(record).some(k => k.match(/^\d{4}-\d{2}$/));
-      if (hasMonthKeys) {
-        allRosters = record;
-      } else if (record.days) {
-        const mk = record.month ? legacyMonthKey(record.month) : '2026-03';
-        allRosters = { [mk]: record };
-      } else {
-        // Maybe it's wrapped differently - try to find days anywhere
-        allRosters = record;
-      }
-    } else {
-      allRosters = {};
-    }
+    allRosters = parseRosterRecord(record);
 
     // Build month selector
     const keys = Object.keys(allRosters).filter(k => k.match(/^\d{4}-\d{2}$/)).sort();
@@ -537,6 +517,29 @@ function openPdf(key) {
   const blob = new Blob([byteArr], {type: 'application/pdf'});
   const url = URL.createObjectURL(blob);
   window.open(url, '_blank');
+}
+
+function parseRosterRecord(record) {
+  if (!record || typeof record !== 'object') return {};
+  
+  // Format 1: multi-month {"2026-03": {days:{}, month:...}, "2026-02": {...}}
+  const monthKeys = Object.keys(record).filter(k => k.match(/^\d{4}-\d{2}$/));
+  if (monthKeys.length > 0) return record;
+  
+  // Format 2: legacy single roster {days:{}, month:"Mar 2026", ...}
+  if (record.days) {
+    const mk = record.month ? legacyMonthKey(record.month) : '2026-03';
+    return { [mk]: record };
+  }
+  
+  // Format 3: nested somehow - look for any object with days
+  for (const k of Object.keys(record)) {
+    if (record[k] && record[k].days) {
+      return parseRosterRecord(record[k]);
+    }
+  }
+  
+  return {};
 }
 
 function legacyMonthKey(monthStr) {
