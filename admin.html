@@ -74,7 +74,7 @@ select.input{appearance:none;}
 <body>
 
 <div class="topbar">
-  <h1>⚙ ROSTER ADMIN <span style="font-size:10px;opacity:0.6;font-weight:400">v4.5</span></h1>
+  <h1>⚙ ROSTER ADMIN <span style="font-size:10px;opacity:0.6;font-weight:400">v4.6</span></h1>
   <a href="index.html" class="back-btn">← Roster</a>
 </div>
 
@@ -353,7 +353,11 @@ async function importPDF(event) {
 
     // DEBUG
     const debugEl = document.getElementById('debugText');
-    if (debugEl) { debugEl.style.display='block'; debugEl.value='--- TESTO ESTRATTO (prime 1000 chars) ---\n' + fullText.substring(0,1000); }
+    if (debugEl) {
+      const last500 = fullText.substring(Math.max(0, fullText.length-500));
+      debugEl.style.display='block';
+      debugEl.value='--- PRIME 500 chars ---\n' + fullText.substring(0,500) + '\n\n--- ULTIME 500 chars (riepilogo) ---\n' + last500;
+    }
 
     const result = parseNeosRoster(fullText);
     if (result.daysFound === 0) {
