@@ -523,10 +523,6 @@ function parseNeosRoster(text) {
     }
   }
 
-  // Count OFF days directly from parsed data (more reliable than PDF text)
-  const offCountFromDays = Object.values(days).filter(d => d.type==='off' || d.type==='offr').length;
-  if (offCountFromDays > 0) offCount = String(offCountFromDays);
-
   return { days, daysFound: Object.keys(days).length, month, fh: fhTotal, off: offCount, remaining };
 }
 
