@@ -74,7 +74,7 @@ select.input{appearance:none;}
 <body>
 
 <div class="topbar">
-  <h1>⚙ ROSTER ADMIN <span style="font-size:10px;opacity:0.6;font-weight:400">v5.5</span></h1>
+  <h1>⚙ ROSTER ADMIN <span style="font-size:10px;opacity:0.6;font-weight:400">v5.6</span></h1>
   <a href="index.html" class="back-btn">← Roster</a>
 </div>
 
@@ -365,11 +365,14 @@ async function importPDF(event) {
       };
 
       // Extract summary values by physical position (works regardless of page order)
-      const remVal = sameRowRight('Remaining');
-      if (remVal) fullText += 'SUMMARY_REMAINING ' + remVal + '\n';
-      
       const monthVal = sameRowRight('Month');
       if (monthVal) fullText += 'SUMMARY_OFF ' + monthVal + '\n';
+      
+      const doneVal = sameRowRight('Done');
+      if (doneVal) fullText += 'SUMMARY_DONE ' + doneVal + '\n';
+      
+      const ytdVal = sameRowRight('YTD');
+      if (ytdVal) fullText += 'SUMMARY_YTD ' + ytdVal + '\n';
 
       const fhItem = items.find(it => it.str.includes('Flight Hours from'));
       if (fhItem) {
