@@ -74,7 +74,7 @@ select.input{appearance:none;}
 <body>
 
 <div class="topbar">
-  <h1>⚙ ROSTER ADMIN <span style="font-size:10px;opacity:0.6;font-weight:400">v6.1</span></h1>
+  <h1>⚙ ROSTER ADMIN <span style="font-size:10px;opacity:0.6;font-weight:400">v6.2</span></h1>
   <a href="index.html" class="back-btn">← Roster</a>
 </div>
 
@@ -458,24 +458,32 @@ async function importPDF(event) {
     // Prevent loadData from overwriting
     justImported = true;
 
-    // Store PDF in separate JSONBin (PDF bin)
+    // Upload PDF to Cloudinary (unsigned, free, works on all devices)
     try {
-      const pdfBase64 = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = e => resolve(e.target.result.split(',')[1]);
-        reader.readAsDataURL(file);
-      });
       const mk = getMonthKey(document.getElementById('fMonth').value);
-      allPdfs[mk] = pdfBase64;
-      // Keep only last 4 months of PDFs
-      const pdfKeys = Object.keys(allPdfs).sort();
-      if (pdfKeys.length > 4) pdfKeys.slice(0, pdfKeys.length - 4).forEach(k => delete allPdfs[k]);
-      fetch(`https://api.jsonbin.io/v3/b/${PDF_BIN_ID}`, {
-        method: 'PUT',
-        headers: { 'Content-Type':'application/json', 'X-Access-Key': API_KEY },
-        body: JSON.stringify(allPdfs)
-      }).then(r => r.json()).then(d => console.log('PDF saved to cloud', d));
-    } catch(e) { console.log('PDF save failed:', e); }
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', 'flightroster');
+      formData.append('public_id', 'roster_' + mk);
+      formData.append('resource_type', 'raw');
+      const cRes = await fetch('https://api.cloudinary.com/v1_1/dzlj6wrri/raw/upload', {
+        method: 'POST',
+        body: formData
+      });
+      const cData = await cRes.json();
+      if (cData.secure_url) {
+        // Save URL in JSONBin PDF bin (just URLs, very small)
+        allPdfs[mk] = cData.secure_url;
+        const pdfKeys = Object.keys(allPdfs).sort();
+        if (pdfKeys.length > 4) pdfKeys.slice(0, pdfKeys.length - 4).forEach(k => delete allPdfs[k]);
+        await fetch(`https://api.jsonbin.io/v3/b/${PDF_BIN_ID}`, {
+          method: 'PUT',
+          headers: { 'Content-Type':'application/json', 'X-Access-Key': API_KEY },
+          body: JSON.stringify(allPdfs)
+        });
+        console.log('PDF uploaded to Cloudinary:', cData.secure_url);
+      }
+    } catch(e) { console.log('PDF upload failed:', e); }
 
     // Auto-save immediately so cloud is updated
     rosterData.month = document.getElementById('fMonth').value;
