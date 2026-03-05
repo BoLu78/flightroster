@@ -74,7 +74,7 @@ select.input{appearance:none;}
 <body>
 
 <div class="topbar">
-  <h1>⚙ ROSTER ADMIN <span style="font-size:10px;opacity:0.6;font-weight:400">v4.8</span></h1>
+  <h1>⚙ ROSTER ADMIN <span style="font-size:10px;opacity:0.6;font-weight:400">v4.9</span></h1>
   <a href="index.html" class="back-btn">← Roster</a>
 </div>
 
@@ -453,9 +453,11 @@ function parseNeosRoster(text) {
   if (mMatch) month = MNAMES[parseInt(mMatch[2])] + ' ' + mMatch[3];
   const fhM = text.match(/Flight Hours\b[\s\S]*?(\d{2,3}[.,]\d{2})/i) || text.match(/(\d{2,3}[.,]\d{2})\s+Holidays/i);
   if (fhM) fhTotal = fhM[1].replace('.', ':').replace(',', ':');
-  const offM = text.match(/Day\s+OFF[\s\S]*?Month\s+(\d+)/i);
+  // "Month" value for Day OFF 
+  const offM = text.match(/Day\s+OFF[\s\S]*?Month[\s\S]*?\b(\d{1,2})\b/i);
   if (offM) offCount = offM[1];
-  const remM = text.match(/Remaining\s+(-?\d+)/i);
+  // Remaining value appears AFTER "ALL TIMES ARE UTC" in PDF layout
+  const remM = text.match(/ALL TIMES ARE UTC[\s\S]*?(-?\d+)/i) || text.match(/Remaining[\s\S]*?(-?\d+)/i);
   if (remM) remaining = remM[1];
   const targetMonth = mMatch ? parseInt(mMatch[2], 10) : 3; // default March
 
