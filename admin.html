@@ -74,7 +74,7 @@ select.input{appearance:none;}
 <body>
 
 <div class="topbar">
-  <h1>⚙ ROSTER ADMIN <span style="font-size:10px;opacity:0.6;font-weight:400">v6.0</span></h1>
+  <h1>⚙ ROSTER ADMIN <span style="font-size:10px;opacity:0.6;font-weight:400">v6.1</span></h1>
   <a href="index.html" class="back-btn">← Roster</a>
 </div>
 
@@ -177,7 +177,9 @@ select.input{appearance:none;}
 
 <script>
 const BIN_ID = '69a8690d43b1c97be9b354e6';
+const PDF_BIN_ID = '69a9c428d0ea881f40f272de';
 let allRosters = {};
+let allPdfs = {};
 
 function getMonthKey(monthStr) {
   // "Mar 2026" -> "2026-03", "Feb 2026" -> "2026-02"
@@ -235,6 +237,14 @@ async function loadData() {
       rosterData = {};
     }
     populateForm();
+    // Also load PDFs
+    try {
+      const pRes = await fetch(`https://api.jsonbin.io/v3/b/${PDF_BIN_ID}/latest`, {
+        headers: { 'X-Access-Key': API_KEY }
+      });
+      const pData = await pRes.json();
+      allPdfs = pData.record || {};
+    } catch(e) { console.log('PDF load failed', e); }
   } catch(e) {
     alert('Errore caricamento dati. Controlla la connessione.');
   }
@@ -448,16 +458,23 @@ async function importPDF(event) {
     // Prevent loadData from overwriting
     justImported = true;
 
-    // Store PDF in localStorage (not JSONBin - too large)
+    // Store PDF in separate JSONBin (PDF bin)
     try {
       const pdfBase64 = await new Promise((resolve) => {
         const reader = new FileReader();
-        reader.onload = e => resolve(e.target.result);
+        reader.onload = e => resolve(e.target.result.split(',')[1]);
         reader.readAsDataURL(file);
       });
       const mk = getMonthKey(document.getElementById('fMonth').value);
-      localStorage.setItem('pdf_' + mk, pdfBase64);
-      console.log('PDF saved to localStorage for', mk);
+      allPdfs[mk] = pdfBase64;
+      // Keep only last 4 months of PDFs
+      const pdfKeys = Object.keys(allPdfs).sort();
+      if (pdfKeys.length > 4) pdfKeys.slice(0, pdfKeys.length - 4).forEach(k => delete allPdfs[k]);
+      fetch(`https://api.jsonbin.io/v3/b/${PDF_BIN_ID}`, {
+        method: 'PUT',
+        headers: { 'Content-Type':'application/json', 'X-Access-Key': API_KEY },
+        body: JSON.stringify(allPdfs)
+      }).then(r => r.json()).then(d => console.log('PDF saved to cloud', d));
     } catch(e) { console.log('PDF save failed:', e); }
 
     // Auto-save immediately so cloud is updated
