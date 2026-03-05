@@ -74,7 +74,7 @@ select.input{appearance:none;}
 <body>
 
 <div class="topbar">
-  <h1>⚙ ROSTER ADMIN <span style="font-size:10px;opacity:0.6;font-weight:400">v5.6</span></h1>
+  <h1>⚙ ROSTER ADMIN <span style="font-size:10px;opacity:0.6;font-weight:400">v5.7</span></h1>
   <a href="index.html" class="back-btn">← Roster</a>
 </div>
 
@@ -177,6 +177,18 @@ select.input{appearance:none;}
 
 <script>
 const BIN_ID = '69a8690d43b1c97be9b354e6';
+let allRosters = {};
+
+function getMonthKey(monthStr) {
+  // "Mar 2026" -> "2026-03", "Feb 2026" -> "2026-02"
+  const months = {gen:'01',feb:'02',mar:'03',apr:'04',mag:'05',giu:'06',
+                  lug:'07',ago:'08',set:'09',ott:'10',nov:'11','dic':'12'};
+  if (!monthStr) return new Date().toISOString().substring(0,7);
+  const parts = monthStr.toLowerCase().split(' ');
+  const m = months[parts[0].substring(0,3)] || '01';
+  const y = parts[1] || new Date().getFullYear();
+  return `${y}-${m}`;
+}
 const API_KEY = '$2a$10$zML8H2V0JzBwhx58kTx66.eL3u5VDf3XJCq3YdWHFJoZT6ikdWeeS';
 const ADMIN_PWD = 'neos787';
 const WDS = ['dom','lun','mar','mer','gio','ven','sab'];
@@ -200,13 +212,22 @@ function doLogin() {
 let justImported = false;
 
 async function loadData() {
-  if (justImported) return; // Don't overwrite after PDF import
+  if (justImported) return;
   try {
     const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
       headers: { 'X-Access-Key': API_KEY }
     });
     const data = await res.json();
-    rosterData = data.record;
+    allRosters = data.record || {};
+    // Load most recent month
+    const keys = Object.keys(allRosters).filter(k => k.match(/^\d{4}-\d{2}$/)).sort();
+    const latestKey = keys[keys.length - 1];
+    if (latestKey && allRosters[latestKey]) {
+      rosterData = allRosters[latestKey];
+    } else {
+      // Legacy: single roster format
+      rosterData = allRosters;
+    }
     populateForm();
   } catch(e) {
     alert('Errore caricamento dati. Controlla la connessione.');
@@ -426,11 +447,14 @@ async function importPDF(event) {
     rosterData.fh = document.getElementById('fFH').value;
     rosterData.off = document.getElementById('fOff').value;
     rosterData.remaining = document.getElementById('fRem').value;
-    rosterData.updated = new Date().toLocaleDateString('it-IT', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    rosterData.updated = new Date().toLocaleString('it-IT');
+    // Save under month key in allRosters
+    const mk = getMonthKey(rosterData.month);
+    allRosters[mk] = Object.assign({}, rosterData);
     fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
       method: 'PUT',
       headers: { 'Content-Type':'application/json', 'X-Access-Key': API_KEY },
-      body: JSON.stringify(rosterData)
+      body: JSON.stringify(allRosters)
     });
 
     // Build comparison message
@@ -631,10 +655,12 @@ async function saveRoster() {
   rosterData.remaining = document.getElementById('fRem').value;
   rosterData.updated = new Date().toLocaleDateString('it-IT', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
   try {
+    const mk2 = getMonthKey(rosterData.month);
+    allRosters[mk2] = Object.assign({}, rosterData);
     await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
       method: 'PUT',
       headers: { 'Content-Type':'application/json', 'X-Access-Key': API_KEY },
-      body: JSON.stringify(rosterData)
+      body: JSON.stringify(allRosters)
     });
     btn.textContent = '✅ Salvato!';
     hasChanges = false;

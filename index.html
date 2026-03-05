@@ -151,10 +151,14 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
 <body>
 
 <div class="topbar">
-  <h1>✈ FLIGHTROSTER <span style="font-size:10px;opacity:0.5;font-weight:400">v1.6</span></h1>
-  <div style="display:flex;align-items:center;gap:10px">
-    <span class="month" id="topMonth">—</span>
-    <a href="admin.html" style="font-size:11px;color:var(--warn);font-weight:700;text-decoration:none;border:1px solid var(--warn);border-radius:6px;padding:3px 7px">ADMIN</a>
+  <h1>✈ FLIGHTROSTER <span style="font-size:10px;opacity:0.5;font-weight:400">v1.7</span></h1>
+  <div style="display:flex;align-items:center;gap:6px">
+    <button onclick="prevMonth()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:14px;cursor:pointer;color:var(--muted)">‹</button>
+    <select id="monthSelect" onchange="switchMonth(this.value)" style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);border:1px solid var(--border);border-radius:6px;padding:3px 6px;background:var(--surface);cursor:pointer">
+      <option>—</option>
+    </select>
+    <button onclick="nextMonth()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:14px;cursor:pointer;color:var(--muted)">›</button>
+    <a href="admin.html" style="font-size:11px;color:var(--warn);font-weight:700;text-decoration:none;border:1px solid var(--warn);border-radius:6px;padding:3px 7px;margin-left:4px">ADMIN</a>
   </div>
 </div>
 
@@ -232,6 +236,8 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
 
 <script>
 const BIN_ID = '69a8690d43b1c97be9b354e6';
+let currentMonthKey = null; // e.g. "2026-03"
+let allRosters = {};        // all months data
 const API_KEY = '$2a$10$zML8H2V0JzBwhx58kTx66.eL3u5VDf3XJCq3YdWHFJoZT6ikdWeeS';
 const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 const TODAY = 5; // March 5 2026
@@ -261,7 +267,7 @@ function dayIcon(info) {
   return '';
 }
 
-function buildCalendar(days, changedDays) {
+function buildCalendar(days, changedDays, roster) {
   const grid = document.getElementById('calGrid');
   grid.innerHTML = '';
   // March 2026 starts on Sunday = offset 6
@@ -312,7 +318,7 @@ function buildCalendar(days, changedDays) {
   }
 }
 
-function buildList(days, changedDays) {
+function buildList(days, changedDays, roster) {
   const list = document.getElementById('listItems');
   list.innerHTML = '';
   for (let d=1;d<=31;d++) {
@@ -412,37 +418,31 @@ async function loadRoster() {
       headers: { 'X-Access-Key': API_KEY }
     });
     const data = await res.json();
-    const roster = data.record;
+    allRosters = data.record || {};
 
-    // Save previous for diff
-    const savedPrev = localStorage.getItem('roster_prev');
-    if (savedPrev) previousDays = JSON.parse(savedPrev);
+    // Build month selector
+    const keys = Object.keys(allRosters).filter(k => k.match(/^\d{4}-\d{2}$/)).sort();
+    const sel = document.getElementById('monthSelect');
+    sel.innerHTML = '';
+    keys.forEach(k => {
+      const r = allRosters[k];
+      const opt = document.createElement('option');
+      opt.value = k;
+      opt.textContent = r.month || k;
+      sel.appendChild(opt);
+    });
 
-    const newDays = roster.days || {};
-
-    // Detect changes
-    if (Object.keys(previousDays).length > 0) {
-      changes = detectChanges(previousDays, newDays);
+    // Default to most recent month
+    if (!currentMonthKey || !allRosters[currentMonthKey]) {
+      currentMonthKey = keys[keys.length - 1] || null;
+    }
+    if (currentMonthKey) {
+      sel.value = currentMonthKey;
+      displayMonth(currentMonthKey);
     }
 
-    currentDays = newDays;
-    localStorage.setItem('roster_prev', JSON.stringify(currentDays));
-
-    const changedDays = changes.map(c => c.day);
-
-    // Update UI
-    document.getElementById('topMonth').textContent = roster.month || '—';
-    document.getElementById('statFH').textContent = roster.fh || '—';
-    document.getElementById('statOff').textContent = roster.off || '—';
-    document.getElementById('statRem').textContent = roster.remaining || '—';
-    document.getElementById('syncDate').textContent = roster.updated || 'Mai';
-
-    buildCalendar(currentDays, changedDays);
-    buildList(currentDays, changedDays);
-    buildChanges(changes);
-
+    document.getElementById('syncDate').textContent = new Date().toLocaleString('it-IT');
   } catch(e) {
-    // Fallback to cached
     const cached = localStorage.getItem('roster_cache');
     if (cached) {
       currentDays = JSON.parse(cached);
@@ -455,9 +455,53 @@ async function loadRoster() {
   btn.disabled = false;
 }
 
+function displayMonth(key) {
+  const roster = allRosters[key];
+  if (!roster) return;
+  currentMonthKey = key;
+
+  const savedPrev = localStorage.getItem('roster_prev_' + key);
+  if (savedPrev) previousDays = JSON.parse(savedPrev);
+  const newDays = roster.days || {};
+  if (Object.keys(previousDays).length > 0) changes = detectChanges(previousDays, newDays);
+  currentDays = newDays;
+  localStorage.setItem('roster_prev_' + key, JSON.stringify(currentDays));
+
+  const changedDays = changes.map(c => c.day);
+  document.getElementById('monthSelect').value = key;
+  document.getElementById('statFH').textContent = roster.fh || '—';
+  document.getElementById('statOff').textContent = roster.off || '—';
+  document.getElementById('statRem').textContent = roster.remaining || '—';
+  document.getElementById('syncDate').textContent = roster.updated || 'Mai';
+
+  // Update calendar month label
+  window._currentRosterMonth = roster.month || key;
+  window._currentRosterMonthKey = key;
+
+  buildCalendar(currentDays, changedDays, roster);
+  buildList(currentDays, changedDays, roster);
+  buildChanges(changes);
+}
+
+function switchMonth(key) {
+  if (key && allRosters[key]) displayMonth(key);
+}
+
+function prevMonth() {
+  const keys = Object.keys(allRosters).filter(k => k.match(/^\d{4}-\d{2}$/)).sort();
+  const idx = keys.indexOf(currentMonthKey);
+  if (idx > 0) displayMonth(keys[idx - 1]);
+}
+
+function nextMonth() {
+  const keys = Object.keys(allRosters).filter(k => k.match(/^\d{4}-\d{2}$/)).sort();
+  const idx = keys.indexOf(currentMonthKey);
+  if (idx < keys.length - 1) displayMonth(keys[idx + 1]);
+}
+
 function openModal(d, info) {
-  document.getElementById('mDate').textContent = `${wdFull[info.wd]||''} · Marzo 2026`;
-  document.getElementById('mTitle').textContent = `${d} Marzo`;
+  const mLabel = window._currentRosterMonth || 'Marzo 2026'; document.getElementById('mDate').textContent = `${wdFull[info.wd]||''} · ${mLabel}`;
+  const mShort = (window._currentRosterMonth||'Marzo 2026').split(' ')[0]; document.getElementById('mTitle').textContent = `${d} ${mShort}`;
   let html = '';
   if (info.ckin) html += `<div class="modal-row"><span class="k">Check-In</span><span class="v blue">${info.ckin} UTC</span></div>`;
   if (info.type==='off') html += `<div class="modal-row"><span class="k">Giornata</span><span class="v">🏠 Giorno libero</span></div>`;
