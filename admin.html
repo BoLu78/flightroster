@@ -74,7 +74,7 @@ select.input{appearance:none;}
 <body>
 
 <div class="topbar">
-  <h1>⚙ ROSTER ADMIN <span style="font-size:10px;opacity:0.6;font-weight:400">v5.3</span></h1>
+  <h1>⚙ ROSTER ADMIN <span style="font-size:10px;opacity:0.6;font-weight:400">v5.5</span></h1>
   <a href="index.html" class="back-btn">← Roster</a>
 </div>
 
@@ -351,13 +351,36 @@ async function importPDF(event) {
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
       const tc = await page.getTextContent();
-      // Sort items by Y position (top to bottom), then X (left to right)
-      const items = tc.items
-        .filter(it => it.str.trim())
-        .sort((a,b) => {
-          const dy = Math.round(b.transform[5]/5)*5 - Math.round(a.transform[5]/5)*5;
-          return dy !== 0 ? dy : a.transform[4] - b.transform[4];
-        });
+      const items = tc.items.filter(it => it.str.trim());
+
+      // Helper: find value on same row (Y) to the right of a label
+      const sameRowRight = (labelText) => {
+        const label = items.find(it => it.str.trim() === labelText);
+        if (!label) return null;
+        const ly = label.transform[5], lx = label.transform[4];
+        const candidates = items
+          .filter(it => Math.abs(it.transform[5] - ly) < 6 && it.transform[4] > lx && it.str.trim())
+          .sort((a,b) => a.transform[4] - b.transform[4]);
+        return candidates[0] ? candidates[0].str.trim() : null;
+      };
+
+      // Extract summary values by physical position (works regardless of page order)
+      const remVal = sameRowRight('Remaining');
+      if (remVal) fullText += 'SUMMARY_REMAINING ' + remVal + '\n';
+      
+      const monthVal = sameRowRight('Month');
+      if (monthVal) fullText += 'SUMMARY_OFF ' + monthVal + '\n';
+
+      const fhItem = items.find(it => it.str.includes('Flight Hours from'));
+      if (fhItem) {
+        const fhy = fhItem.transform[5], fhx = fhItem.transform[4];
+        const fhVal = items
+          .filter(it => Math.abs(it.transform[5] - fhy) < 6 && it.transform[4] > fhx && it.str.trim())
+          .sort((a,b) => a.transform[4] - b.transform[4])[0];
+        if (fhVal) fullText += 'SUMMARY_FH ' + fhVal.str.trim() + '\n';
+      }
+
+      // Normal text extraction
       fullText += items.map(it => it.str).join(' ') + '\n';
     }
 
@@ -463,11 +486,9 @@ function parseNeosRoster(text) {
   // "Month" value for Day OFF 
   const offM = text.match(/Day\s+OFF[\s\S]*?Month[\s\S]*?\b(\d{1,2})\b/i);
   if (offM) offCount = offM[1];
-  // Remaining: appears after the 2nd occurrence of "ALL TIMES ARE UTC" (page 2)
-  // Page 1 = "...UTC 1", Page 2 = "...UTC -3 2", Page 3 = "...UTC 3"
-  const utcMatches = [...text.matchAll(/ALL TIMES ARE UTC\s+(-?\d{1,3})/gi)];
-  if (utcMatches.length >= 2) remaining = utcMatches[1][1];
-  else if (utcMatches.length === 1) remaining = utcMatches[0][1];
+  // Remaining: extracted directly from same-row position as "Remaining" label
+  const remMarker = text.match(/REMAINING_VALUE\s+(-?\d+)/);
+  if (remMarker) remaining = remMarker[1];
   const targetMonth = mMatch ? parseInt(mMatch[2], 10) : 3; // default March
 
   // Only split at dates followed by day abbreviation (su/mo/tu/we/th/fr/sa)
