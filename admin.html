@@ -372,6 +372,7 @@ async function importPDF(event) {
     if (result.month) { rosterData.month = result.month; document.getElementById('fMonth').value = result.month; }
     if (result.fh) { rosterData.fh = result.fh; document.getElementById('fFH').value = result.fh; }
     if (result.off) { rosterData.off = result.off; document.getElementById('fOff').value = result.off; }
+    else { console.log('WARNING: result.off is empty, text sample:', fullText.substring(fullText.indexOf('Day OFF'), fullText.indexOf('Day OFF')+60)); }
     if (result.remaining) { rosterData.remaining = result.remaining; document.getElementById('fRem').value = result.remaining; }
 
     buildDaysList();
@@ -430,7 +431,7 @@ function parseNeosRoster(text) {
   if (mMatch) month = MNAMES[parseInt(mMatch[2])] + ' ' + mMatch[3];
   const fhM = text.match(/Flight Hours\b.*?(\d{2,3}[.,]\d{2})/i) || text.match(/(\d{2,3}[.,]\d{2})\s+Holidays/i);
   if (fhM) fhTotal = fhM[1].replace('.', ':').replace(',', ':');
-  const offM = text.match(/Month\s+(\d+)/i);
+  const offM = text.match(/Day\s+OFF\s+Month\s+(\d+)/i) || text.match(/Month\s+(\d+)/i);
   if (offM) offCount = offM[1];
   const remM = text.match(/Remaining\s+(-?\d+)/i);
   if (remM) remaining = remM[1];
