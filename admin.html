@@ -74,7 +74,7 @@ select.input{appearance:none;}
 <body>
 
 <div class="topbar">
-  <h1>⚙ ROSTER ADMIN <span style="font-size:10px;opacity:0.6;font-weight:400">v5.9</span></h1>
+  <h1>⚙ ROSTER ADMIN <span style="font-size:10px;opacity:0.6;font-weight:400">v6.0</span></h1>
   <a href="index.html" class="back-btn">← Roster</a>
 </div>
 
@@ -218,15 +218,21 @@ async function loadData() {
       headers: { 'X-Access-Key': API_KEY }
     });
     const data = await res.json();
-    allRosters = data.record || {};
-    // Load most recent month
-    const keys = Object.keys(allRosters).filter(k => k.match(/^\d{4}-\d{2}$/)).sort();
-    const latestKey = keys[keys.length - 1];
-    if (latestKey && allRosters[latestKey]) {
-      rosterData = allRosters[latestKey];
+    const record = data.record || {};
+    // Detect format
+    const monthKeys = Object.keys(record).filter(k => k.match(/^\d{4}-\d{2}$/)).sort();
+    if (monthKeys.length > 0) {
+      // New multi-month format
+      allRosters = record;
+      rosterData = allRosters[monthKeys[monthKeys.length - 1]] || {};
+    } else if (record.days) {
+      // Legacy single-month format - migrate it
+      const mk = record.month ? getMonthKey(record.month) : '2026-03';
+      allRosters = { [mk]: record };
+      rosterData = record;
     } else {
-      // Legacy: single roster format
-      rosterData = allRosters;
+      allRosters = {};
+      rosterData = {};
     }
     populateForm();
   } catch(e) {
@@ -442,14 +448,16 @@ async function importPDF(event) {
     // Prevent loadData from overwriting
     justImported = true;
 
-    // Store PDF as base64 in rosterData
+    // Store PDF in localStorage (not JSONBin - too large)
     try {
       const pdfBase64 = await new Promise((resolve) => {
         const reader = new FileReader();
-        reader.onload = e => resolve(e.target.result.split(',')[1]);
+        reader.onload = e => resolve(e.target.result);
         reader.readAsDataURL(file);
       });
-      rosterData.pdfBase64 = pdfBase64;
+      const mk = getMonthKey(document.getElementById('fMonth').value);
+      localStorage.setItem('pdf_' + mk, pdfBase64);
+      console.log('PDF saved to localStorage for', mk);
     } catch(e) { console.log('PDF save failed:', e); }
 
     // Auto-save immediately so cloud is updated
