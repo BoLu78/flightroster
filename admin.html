@@ -74,7 +74,7 @@ select.input{appearance:none;}
 <body>
 
 <div class="topbar">
-  <h1>⚙ ROSTER ADMIN <span style="font-size:10px;opacity:0.6;font-weight:400">v4.4</span></h1>
+  <h1>⚙ ROSTER ADMIN <span style="font-size:10px;opacity:0.6;font-weight:400">v4.5</span></h1>
   <a href="index.html" class="back-btn">← Roster</a>
 </div>
 
@@ -362,6 +362,11 @@ async function importPDF(event) {
       return;
     }
 
+    // Compare with existing data and show differences
+    const oldFH = rosterData.fh || '';
+    const oldOff = rosterData.off || '';
+    const oldRem = rosterData.remaining || '';
+
     // Merge into rosterData
     rosterData.days = result.days;
     if (result.month) { rosterData.month = result.month; document.getElementById('fMonth').value = result.month; }
@@ -371,8 +376,32 @@ async function importPDF(event) {
 
     buildDaysList();
     markChanged();
-    status.style.color = 'var(--accent2)';
-    status.textContent = `✅ Importati ${result.daysFound} giorni! Controlla e salva.`;
+
+    // Build comparison message
+    let diffMsg = `✅ Importati ${result.daysFound} giorni!`;
+    const diffs = [];
+    if (oldFH && result.fh && oldFH !== result.fh) {
+      const toMins = s => { const [h,m] = s.replace(',',':').replace('.',':').split(':').map(Number); return h*60+(m||0); };
+      const delta = toMins(result.fh) - toMins(oldFH);
+      const sign = delta > 0 ? '+' : '';
+      const dh = Math.floor(Math.abs(delta)/60), dm = Math.abs(delta)%60;
+      diffs.push(`⏱ Ore volo: ${oldFH} → ${result.fh} <span style="color:${delta>0?'#e65100':'#1b5e20'};font-weight:700">(${sign}${dh}h${dm>0?dm+'m':''})</span>`);
+    }
+    if (oldOff && result.off && oldOff !== result.off) {
+      const delta = parseInt(result.off) - parseInt(oldOff);
+      diffs.push(`🏠 Giorni OFF: ${oldOff} → ${result.off} <span style="color:${delta>0?'#1b5e20':'#e65100'};font-weight:700">(${delta>0?'+':''}${delta})</span>`);
+    }
+    if (oldRem && result.remaining && oldRem !== result.remaining) {
+      const delta = parseInt(result.remaining) - parseInt(oldRem);
+      diffs.push(`📊 Remaining: ${oldRem} → ${result.remaining} <span style="color:${delta>0?'#1b5e20':'#e65100'};font-weight:700">(${delta>0?'+':''}${delta})</span>`);
+    }
+    if (diffs.length > 0) {
+      diffMsg += '<br><br><b>Modifiche rilevate:</b><br>' + diffs.join('<br>');
+      status.style.color = 'var(--warn)';
+    } else {
+      status.style.color = 'var(--accent2)';
+    }
+    status.innerHTML = diffMsg;
   } catch(e) {
     status.style.color = 'var(--danger)';
     status.textContent = '❌ Errore lettura PDF: ' + e.message;
@@ -399,7 +428,7 @@ function parseNeosRoster(text) {
 
   const mMatch = text.match(/From\s+(\d{2})\/(\d{2})\/(\d{4})/);
   if (mMatch) month = MNAMES[parseInt(mMatch[2])] + ' ' + mMatch[3];
-  const fhM = text.match(/(\d{2}[.,]\d{2})\s+0\s+00[.,]00/);
+  const fhM = text.match(/Flight Hours\b.*?(\d{2,3}[.,]\d{2})/i) || text.match(/(\d{2,3}[.,]\d{2})\s+Holidays/i);
   if (fhM) fhTotal = fhM[1].replace('.', ':').replace(',', ':');
   const offM = text.match(/Month\s+(\d+)/i);
   if (offM) offCount = offM[1];
