@@ -146,12 +146,19 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
 
 /* LOADING */
 .loading { text-align:center; padding:40px; color:var(--muted); font-size:15px; }
+
+/* ROSTER PDF LIST */
+.roster-pdf-item { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; text-decoration:none; }
+.roster-pdf-item:active { opacity:0.7; }
+.roster-pdf-month { font-size:17px; font-weight:700; color:var(--text); }
+.roster-pdf-sub { font-size:12px; color:var(--muted); margin-top:3px; }
+.roster-pdf-icon { font-size:28px; }
 </style>
 </head>
 <body>
 
 <div class="topbar">
-  <h1>✈ FLIGHTROSTER <span style="font-size:10px;opacity:0.5;font-weight:400">v1.7</span></h1>
+  <h1>✈ FLIGHTROSTER <span style="font-size:10px;opacity:0.5;font-weight:400">v1.8</span></h1>
   <div style="display:flex;align-items:center;gap:6px">
     <button onclick="prevMonth()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:14px;cursor:pointer;color:var(--muted)">‹</button>
     <select id="monthSelect" onchange="switchMonth(this.value)" style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);border:1px solid var(--border);border-radius:6px;padding:3px 6px;background:var(--surface);cursor:pointer">
@@ -216,6 +223,22 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
   </div>
 </div>
 
+<!-- ROSTERS VIEW -->
+<div class="view" id="view-rosters">
+  <div style="padding:16px 0 8px">
+    <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px">PDF Roster per mese</div>
+    <div id="rosterPdfList"><div class="loading">Caricamento...</div></div>
+  </div>
+  <div style="margin-top:16px;padding:14px;background:var(--surface2);border-radius:12px;border:1px solid var(--border)">
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px">📁 Come aggiungere un roster PDF:</div>
+    <div style="font-size:12px;color:var(--text);line-height:1.6">
+      1. Rinomina il PDF come <b>2026-03.pdf</b><br>
+      2. Caricalo su GitHub nella cartella <b>/rosters/</b><br>
+      3. Torna qui e aggiorna
+    </div>
+  </div>
+</div>
+
 <!-- MODAL -->
 <div class="modal-overlay" id="modal" onclick="handleOverlay(event)">
   <div class="modal">
@@ -231,6 +254,7 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
   <button class="nav-btn active" id="btn-cal" onclick="switchTab('cal')"><span class="icon">📅</span>Calendario</button>
   <button class="nav-btn" id="btn-list" onclick="switchTab('list')"><span class="icon">📋</span>Lista</button>
   <button class="nav-btn" id="btn-changes" onclick="switchTab('changes')"><span class="icon">🔄</span>Modifiche</button>
+  <button class="nav-btn" id="btn-rosters" onclick="switchTab('rosters')"><span class="icon">🗂️</span>Roster</button>
   <button class="nav-btn" id="btn-docs" onclick="switchTab('docs')"><span class="icon">📄</span>Documenti</button>
 </div>
 
