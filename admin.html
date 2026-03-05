@@ -74,7 +74,7 @@ select.input{appearance:none;}
 <body>
 
 <div class="topbar">
-  <h1>⚙ ROSTER ADMIN <span style="font-size:10px;opacity:0.6;font-weight:400">v5.7</span></h1>
+  <h1>⚙ ROSTER ADMIN <span style="font-size:10px;opacity:0.6;font-weight:400">v5.9</span></h1>
   <a href="index.html" class="back-btn">← Roster</a>
 </div>
 
@@ -442,6 +442,16 @@ async function importPDF(event) {
     // Prevent loadData from overwriting
     justImported = true;
 
+    // Store PDF as base64 in rosterData
+    try {
+      const pdfBase64 = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result.split(',')[1]);
+        reader.readAsDataURL(file);
+      });
+      rosterData.pdfBase64 = pdfBase64;
+    } catch(e) { console.log('PDF save failed:', e); }
+
     // Auto-save immediately so cloud is updated
     rosterData.month = document.getElementById('fMonth').value;
     rosterData.fh = document.getElementById('fFH').value;
@@ -451,6 +461,13 @@ async function importPDF(event) {
     // Save under month key in allRosters
     const mk = getMonthKey(rosterData.month);
     allRosters[mk] = Object.assign({}, rosterData);
+
+    // Keep only last 4 months
+    const autoKeys = Object.keys(allRosters).filter(k => k.match(/^\d{4}-\d{2}$/)).sort();
+    if (autoKeys.length > 4) {
+      autoKeys.slice(0, autoKeys.length - 4).forEach(k => { delete allRosters[k]; });
+    }
+
     fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
       method: 'PUT',
       headers: { 'Content-Type':'application/json', 'X-Access-Key': API_KEY },
@@ -657,6 +674,15 @@ async function saveRoster() {
   try {
     const mk2 = getMonthKey(rosterData.month);
     allRosters[mk2] = Object.assign({}, rosterData);
+
+    // Keep only last 4 months - remove oldest if more than 4
+    const allKeys = Object.keys(allRosters).filter(k => k.match(/^\d{4}-\d{2}$/)).sort();
+    if (allKeys.length > 4) {
+      const toDelete = allKeys.slice(0, allKeys.length - 4);
+      toDelete.forEach(k => { delete allRosters[k]; });
+      console.log('Rimossi mesi vecchi:', toDelete);
+    }
+
     await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
       method: 'PUT',
       headers: { 'Content-Type':'application/json', 'X-Access-Key': API_KEY },
