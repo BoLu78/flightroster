@@ -433,9 +433,9 @@ function parseNeosRoster(text) {
 
   const mMatch = text.match(/From\s+(\d{2})\/(\d{2})\/(\d{4})/);
   if (mMatch) month = MNAMES[parseInt(mMatch[2])] + ' ' + mMatch[3];
-  const fhM = text.match(/Flight Hours\b.*?(\d{2,3}[.,]\d{2})/i) || text.match(/(\d{2,3}[.,]\d{2})\s+Holidays/i);
+  const fhM = text.match(/Flight Hours\b[\s\S]*?(\d{2,3}[.,]\d{2})/i) || text.match(/(\d{2,3}[.,]\d{2})\s+Holidays/i);
   if (fhM) fhTotal = fhM[1].replace('.', ':').replace(',', ':');
-  const offM = text.match(/Day\s+OFF\s+Month\s+(\d+)/i) || text.match(/Month\s+(\d+)/i);
+  const offM = text.match(/Day\s+OFF[\s\S]*?Month\s+(\d+)/i);
   if (offM) offCount = offM[1];
   const remM = text.match(/Remaining\s+(-?\d+)/i);
   if (remM) remaining = remM[1];
