@@ -74,7 +74,7 @@ select.input{appearance:none;}
 <body>
 
 <div class="topbar">
-  <h1>⚙ ROSTER ADMIN <span style="font-size:10px;opacity:0.6;font-weight:400">v4.7</span></h1>
+  <h1>⚙ ROSTER ADMIN <span style="font-size:10px;opacity:0.6;font-weight:400">v4.8</span></h1>
   <a href="index.html" class="back-btn">← Roster</a>
 </div>
 
@@ -197,7 +197,10 @@ function doLogin() {
   }
 }
 
+let justImported = false;
+
 async function loadData() {
+  if (justImported) return; // Don't overwrite after PDF import
   try {
     const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
       headers: { 'X-Access-Key': API_KEY }
@@ -381,6 +384,9 @@ async function importPDF(event) {
 
     buildDaysList();
     markChanged();
+
+    // Prevent loadData from overwriting
+    justImported = true;
 
     // Auto-save immediately so cloud is updated
     rosterData.month = document.getElementById('fMonth').value;
