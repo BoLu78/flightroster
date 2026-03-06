@@ -330,7 +330,7 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
 
 <script>
 // ── Variabili globali ──
-const APP_VERSION = '3.3';
+const APP_VERSION = '3.4';
 const CONFIG = {
   BIN_ID: '69a8690d43b1c97be9b354e6',
   PDF_BIN_ID: '69a9c428d0ea881f40f272de',
@@ -588,46 +588,14 @@ async function importPDF(event) {
 
 // ── PDF Roster (semplice: apri direttamente nel browser) ──
 
-async function updateRosterViewer(key = currentMonthKey) {
-  const viewer = document.getElementById('rosterViewer');
-  if (!viewer) return;
+function updateRosterViewer(key = currentMonthKey) {
 
-  if (rosterViewerBlobUrl) {
-    URL.revokeObjectURL(rosterViewerBlobUrl);
-    rosterViewerBlobUrl = null;
-  }
+  const iframe = document.getElementById('rosterViewer');
 
-  if (!key) {
-    viewer.removeAttribute('src');
-    return;
-  }
+  const url = `https://bolu78.github.io/flightroster/rosters/roster_${key}.pdf`;
 
-  const rosterPath = `rosters/${key}.pdf`;
-  try {
-    const head = await fetch(rosterPath, { method: 'HEAD', cache: 'no-store' });
-    if (head.ok) {
-      viewer.src = rosterPath;
-      return;
-    }
+  iframe.src = url;
 
-    viewer.removeAttribute('src');
-    return;
-  } catch (e) {
-    console.log('Viewer rosters path non disponibile, provo cache offline');
-  }
-
-  try {
-    const blob = await idbGet(key);
-    if (blob) {
-      rosterViewerBlobUrl = URL.createObjectURL(blob);
-      viewer.src = rosterViewerBlobUrl;
-      return;
-    }
-  } catch (e) {
-    console.warn('Viewer offline load error:', e.message);
-  }
-
-  viewer.removeAttribute('src');
 }
 
 async function buildRosterPdfList() {
@@ -646,7 +614,7 @@ async function buildRosterPdfList() {
         <div style="font-size:40px;margin-bottom:12px">📭</div>
         <p>Nessun roster PDF disponibile.<br>Carica il PDF dall'admin.</p>
       </div>`;
-    await updateRosterViewer();
+    updateRosterViewer(currentMonthKey);
     return;
   }
 
@@ -677,7 +645,7 @@ async function buildRosterPdfList() {
     container.appendChild(card);
   }
 
-  await updateRosterViewer();
+  updateRosterViewer(currentMonthKey);
 }
 
 async function openOfflinePdf(key) {

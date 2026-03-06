@@ -164,7 +164,7 @@ select.input{appearance:none;}
 </div>
 
 <script>
-const APP_VERSION = '3.3';
+const APP_VERSION = '3.4';
 const CONFIG = {
   BIN_ID: '69a8690d43b1c97be9b354e6',
   PDF_BIN_ID: '69a9c428d0ea881f40f272de',
@@ -571,7 +571,7 @@ function parseNeosRoster(text) {
   if (mMatch) month=MNAMES[parseInt(mMatch[2])]+' '+mMatch[3];
   const fhM=text.match(/Flight Hours\b[\s\S]*?(\d{2,3}[.,]\d{2})/i)||text.match(/(\d{2,3}[.,]\d{2})\s+Holidays/i);
   if (fhM) fhTotal=fhM[1].replace('.',':').replace(',',':');
-  const offM=text.match(/Day\s+OFF[\s\S]*?Month[\s\S]*?\b(\d{1,2})\b/i);
+  const offM = text.match(/Day\s+OFF\s+Month\s+(\d{1,2})/i);
   if (offM) offCount=offM[1];
   const remMatch = text.match(/Remaining\s*(-?\d+)/i);
   if (remMatch) remaining = remMatch[1];
