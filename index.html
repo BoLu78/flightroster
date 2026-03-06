@@ -61,6 +61,16 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
 .sync-info span { color:var(--accent); font-weight:600; }
 .sync-btn { background:var(--accent); color:white; border:none; border-radius:8px; padding:7px 14px; font-size:13px; font-weight:600; cursor:pointer; font-family:'IBM Plex Sans',sans-serif; }
 .sync-btn:active { opacity:0.8; }
+
+.roster-actions{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin:16px;
+}
+.roster-actions .sync-btn{
+  width:100%;
+}
 /* CALENDAR */
 .cal-header-row { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; margin:0 16px 3px; }
 .cal-header-row div { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted); text-align:center; padding:4px 0; }
@@ -212,7 +222,7 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
 <body>
 
 <div class="topbar">
-  <h1>✈ FLIGHTROSTER <span style="font-size:10px;opacity:0.5;font-weight:400">v2.7</span></h1>
+  <h1>✈ FLIGHTROSTER <span id="appVersionLabel" style="font-size:10px;opacity:0.5;font-weight:400"></span></h1>
   <div style="display:flex;align-items:center;gap:6px">
     <button onclick="prevMonth()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:14px;cursor:pointer;color:var(--muted)">‹</button>
     <select id="monthSelect" onchange="switchMonth(this.value)" style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);border:1px solid var(--border);border-radius:6px;padding:3px 6px;background:var(--surface);cursor:pointer">
@@ -234,6 +244,12 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
   <div class="sync-info">Aggiornato: <span id="syncDate">—</span></div>
   <button class="sync-btn" onclick="loadRoster()">⟳ Aggiorna</button>
 </div>
+
+<div class="roster-actions">
+  <button class="sync-btn" onclick="triggerRosterImport()">📄 Importa roster PDF</button>
+  <button class="sync-btn" onclick="openCompanyRoster()">🌐 Apri sito roster azienda</button>
+</div>
+<input type="file" id="rosterPdfInput" accept="application/pdf" style="display:none">
 
 <!-- CAL VIEW -->
 <div class="view active" id="view-cal">
@@ -306,11 +322,18 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
 
 <script>
 // ── Variabili globali ──
-const BIN_ID     = '69a8690d43b1c97be9b354e6';
-const PDF_BIN_ID = '69a9c428d0ea881f40f272de';
-const API_KEY    = '$2a$10$zML8H2V0JzBwhx58kTx66.eL3u5VDf3XJCq3YdWHFJoZT6ikdWeeS';
-const API_URL    = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
-const PDF_API_URL= `https://api.jsonbin.io/v3/b/${PDF_BIN_ID}`;
+const APP_VERSION = '2.9';
+const CONFIG = {
+  BIN_ID: '69a8690d43b1c97be9b354e6',
+  PDF_BIN_ID: '69a9c428d0ea881f40f272de'
+};
+const API_URL    = `https://api.jsonbin.io/v3/b/${CONFIG.BIN_ID}`;
+const PDF_API_URL= `https://api.jsonbin.io/v3/b/${CONFIG.PDF_BIN_ID}`;
+
+async function secureFetch(url, options) {
+  console.warn('secureFetch placeholder — API calls should be proxied by backend');
+  return fetch(url, options);
+}
 const IDB_NAME   = 'FlightRosterDB';
 const IDB_STORE  = 'pdfs';
 const TODAY = 5;
@@ -321,6 +344,234 @@ let allPdfs = {};      // { "2026-03": "https://cloudinary_url..." }
 let currentDays = {};
 let previousDays = {};
 let changes = [];
+
+const LS_ROSTER_CACHE = 'roster_cache_v1';
+const LS_PDF_CACHE = 'roster_pdf_cache_v1';
+
+function idbOpen() {
+  return new Promise((resolve, reject) => {
+    if (!('indexedDB' in window)) {
+      reject(new Error('IndexedDB non supportato'));
+      return;
+    }
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(IDB_STORE)) {
+        db.createObjectStore(IDB_STORE);
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error || new Error('Errore apertura IndexedDB'));
+  });
+}
+
+async function idbSet(key, blob) {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).put(blob, key);
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error || new Error('Errore salvataggio PDF offline'));
+  });
+}
+
+async function idbGet(key) {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readonly');
+    const req = tx.objectStore(IDB_STORE).get(key);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => reject(req.error || new Error('Errore lettura PDF offline'));
+  });
+}
+
+async function idbDelete(key) {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).delete(key);
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error || new Error('Errore rimozione PDF offline'));
+  });
+}
+
+async function idbKeys() {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readonly');
+    const store = tx.objectStore(IDB_STORE);
+    const req = store.getAllKeys();
+    req.onsuccess = () => resolve((req.result || []).map(String));
+    req.onerror = () => reject(req.error || new Error('Errore lettura elenco PDF offline'));
+  });
+}
+
+function saveCache(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch(e) {}
+}
+
+function loadCache(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch(e) {
+    return null;
+  }
+}
+
+
+function triggerRosterImport(){
+  document.getElementById('rosterPdfInput').click();
+}
+
+function openCompanyRoster(){
+  window.location.href = 'https://YOUR_COMPANY_ROSTER_SITE';
+}
+
+function getMonthKeyFromLabel(monthStr) {
+  const months = {gen:'01',feb:'02',mar:'03',apr:'04',mag:'05',giu:'06',lug:'07',ago:'08',set:'09',ott:'10',nov:'11','dic':'12'};
+  if (!monthStr) return new Date().toISOString().substring(0,7);
+  const parts = monthStr.toLowerCase().split(' ');
+  const m = months[(parts[0]||'').substring(0,3)] || String(new Date().getMonth()+1).padStart(2,'0');
+  const y = parts[1] || String(new Date().getFullYear());
+  return `${y}-${m}`;
+}
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
+    const script = document.createElement('script');
+    script.src = src;
+    script.onload = resolve;
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+}
+
+function parseNeosRoster(text) {
+  const DAY_ABB={su:'dom',mo:'lun',tu:'mar',we:'mer',th:'gio',fr:'ven',sa:'sab'};
+  const MNAMES=['','Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+  const SKIP=new Set(['DEP','ARR','ETD','ETA','FH','DH','HTL']);
+  let fhTotal='',offCount='',remaining='',month='';
+  const days={};
+  const mMatch=text.match(/From\s+(\d{2})\/(\d{2})\/(\d{4})/);
+  if (mMatch) month=MNAMES[parseInt(mMatch[2],10)]+' '+mMatch[3];
+  const fhM=text.match(/Flight Hours\b[\s\S]*?(\d{2,3}[.,]\d{2})/i)||text.match(/(\d{2,3}[.,]\d{2})\s+Holidays/i);
+  if (fhM) fhTotal=fhM[1].replace('.',':').replace(',',':');
+  const offM=text.match(/Day\s+OFF[\s\S]*?Month[\s\S]*?\b(\d{1,2})\b/i);
+  if (offM) offCount=offM[1];
+  const remMarker=text.match(/REMAINING_VALUE\s+(-?\d+)/);
+  if (remMarker) remaining=remMarker[1];
+  const targetMonth=mMatch?parseInt(mMatch[2],10):new Date().getMonth()+1;
+  const chunks=text.split(/(?=\b\d{2}\/\d{2}\/\d{4}\s+(?:su|mo|tu|we|th|fr|sa)\b)/);
+  const rawChunks={};
+  for (const chunk of chunks) {
+    const dm=chunk.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(su|mo|tu|we|th|fr|sa)\b\s*([\s\S]*)/i);
+    if (!dm) continue;
+    const day=parseInt(dm[1],10),mo=parseInt(dm[2],10);
+    if (mo!==targetMonth) continue;
+    rawChunks[day]={wd:DAY_ABB[dm[4]]||dm[4],rest:dm[5]||''};
+  }
+  for (let day=1;day<=31;day++) {
+    const rc=rawChunks[day];
+    if (!rc) continue;
+    const {wd,rest}=rc;
+    if (/\bLAYOVER\b/i.test(rest)) { days[day]={type:'layover',wd,htl:true,city:''}; continue; }
+    if (/OFF\(R\)/i.test(rest))     { days[day]={type:'offr',wd}; continue; }
+    if (/\bOFF\b/i.test(rest)&&!/[A-Z]{3}\s+[A-Z>]{3}\s+\d{2}:\d{2}/.test(rest)) { days[day]={type:'off',wd}; continue; }
+    const ckin=(()=>{const c=rest.match(/\.{3,}\s+(\d{2}:\d{2})/);return c?c[1]:'';})();
+    const htl=/\bHTL\b/.test(rest);
+    const flights=extractFlights(rest,SKIP);
+    if (flights.length>0) {
+      const allDH=flights.every(f=>f.dh);
+      days[day]={type:allDH?'dh':'flight',wd,ckin,htl,flights};
+    } else if (ckin) {
+      days[day]={type:'flight',wd,ckin,htl,flights:[]};
+    }
+  }
+  return {days,daysFound:Object.keys(days).length,month,fh:fhTotal,off:offCount,remaining};
+}
+
+function extractFlights(rest,SKIP) {
+  const flights=[];
+  const segRe=/(?:(NO\d+|AZ\d+|\d{3,4})\s+)?([A-Z]{3})\s+([A-Z]{3}|>)\s+(\d{2}:\d{2})\s*(\d{2}:\d{2})?\s*(\d{2}[.,]\d{2})?/g;
+  let m;
+  while ((m=segRe.exec(rest))!==null) {
+    const fn=m[1]||'',dep=m[2],arr=m[3],etd=m[4],eta=m[5]||'',fh=(m[6]||'').replace('.',':').replace(',',':');
+    if (SKIP.has(dep)||SKIP.has(arr)) continue;
+    const after=rest.substring(m.index+m[0].length,m.index+m[0].length+60);
+    const before=rest.substring(Math.max(0,m.index-10),m.index);
+    const isDH=/\bDH\b/.test(after)||/\bDH\b/.test(before);
+    flights.push({fn,dep,arr:arr==='>'?'···':arr,etd,eta,fh,dh:isDH});
+  }
+  return flights;
+}
+
+async function importPDF(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  try {
+    if (!window.pdfjsLib) {
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let fullText = '';
+    for (let i=1; i<=pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const tc = await page.getTextContent();
+      const items = tc.items.filter(it => it.str.trim());
+      fullText += items.map(it=>it.str).join(' ') + '\n';
+    }
+
+    const result = parseNeosRoster(fullText);
+    if (result.daysFound === 0) {
+      alert('Nessun giorno trovato nel PDF.');
+      return;
+    }
+
+    const monthLabel = result.month || allRosters[currentMonthKey]?.month || new Date().toLocaleDateString('it-IT', { month:'long', year:'numeric' });
+    const monthKey = getMonthKeyFromLabel(monthLabel);
+    const existing = allRosters[monthKey] || {};
+    allRosters[monthKey] = {
+      ...existing,
+      month: monthLabel,
+      fh: result.fh || existing.fh || '—',
+      off: result.off || existing.off || '—',
+      remaining: result.remaining || existing.remaining || '—',
+      updated: new Date().toLocaleString('it-IT'),
+      days: result.days
+    };
+
+    saveCache(LS_ROSTER_CACHE, allRosters);
+    const keys = Object.keys(allRosters).filter(k => k.match(/^\d{4}-\d{2}$/)).sort();
+    const sel = document.getElementById('monthSelect');
+    sel.innerHTML = '';
+    keys.forEach(k => {
+      const r = allRosters[k];
+      const opt = document.createElement('option');
+      opt.value = k; opt.textContent = r.month || k;
+      sel.appendChild(opt);
+    });
+    displayMonth(monthKey);
+    alert(`✅ Importati ${result.daysFound} giorni da PDF`);
+
+    try {
+      await secureFetch(API_URL, {
+        method:'PUT',
+        headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify(allRosters)
+      });
+    } catch(e) {
+      console.warn('Sync roster post-import fallita:', e.message);
+    }
+  } catch (e) {
+    alert('Errore import PDF: ' + e.message);
+  }
+  event.target.value = '';
+}
 
 // ── PDF Roster (semplice: apri direttamente nel browser) ──
 
@@ -583,11 +834,14 @@ async function loadRoster() {
   const btn = document.querySelector('.sync-btn');
   btn.textContent = '⟳ Carico...';
   btn.disabled = true;
+  let loadedOnline = false;
   try {
-    const res = await fetch(API_URL + '/latest', { headers: { 'X-Access-Key': API_KEY } });
+    const res = await secureFetch(API_URL + '/latest');
     const data = await res.json();
     const record = data.record || {};
     allRosters = parseRosterRecord(record);
+    saveCache(LS_ROSTER_CACHE, allRosters);
+    loadedOnline = true;
 
     const keys = Object.keys(allRosters).filter(k => k.match(/^\d{4}-\d{2}$/)).sort();
     const sel = document.getElementById('monthSelect');
@@ -603,19 +857,37 @@ async function loadRoster() {
 
     // Carica URL PDF dal bin dedicato
     try {
-      const pRes = await fetch(PDF_API_URL + '/latest', { headers: { 'X-Access-Key': API_KEY } });
+      const pRes = await secureFetch(PDF_API_URL + '/latest');
       const pData = await pRes.json();
       allPdfs = normalizePdfRecord(pData.record || {});
       // Scarta URL non GitHub Pages (Cloudinary vecchi ecc.)
       for (const [k, v] of Object.entries(allPdfs)) {
         if (!v.startsWith('https://bolu78.github.io/')) delete allPdfs[k];
       }
+      saveCache(LS_PDF_CACHE, allPdfs);
     } catch(e) { console.log('[PDF bin] load failed:', e); }
 
     document.getElementById('syncDate').textContent = new Date().toLocaleString('it-IT');
   } catch(e) {
     console.warn('[loadRoster] offline mode:', e.message);
-    document.getElementById('syncDate').textContent = 'Offline';
+    const cachedRosters = loadCache(LS_ROSTER_CACHE);
+    const cachedPdfs = loadCache(LS_PDF_CACHE);
+    if (cachedRosters && typeof cachedRosters === 'object') {
+      allRosters = cachedRosters;
+      const keys = Object.keys(allRosters).filter(k => k.match(/^\d{4}-\d{2}$/)).sort();
+      const sel = document.getElementById('monthSelect');
+      sel.innerHTML = '';
+      keys.forEach(k => {
+        const r = allRosters[k];
+        const opt = document.createElement('option');
+        opt.value = k; opt.textContent = r.month || k;
+        sel.appendChild(opt);
+      });
+      if (!currentMonthKey || !allRosters[currentMonthKey]) currentMonthKey = keys[keys.length-1] || null;
+      if (currentMonthKey) { sel.value = currentMonthKey; displayMonth(currentMonthKey); }
+    }
+    allPdfs = (cachedPdfs && typeof cachedPdfs === 'object') ? cachedPdfs : {};
+    document.getElementById('syncDate').textContent = loadedOnline ? new Date().toLocaleString('it-IT') : 'Offline (cache)';
   }
 
   // Costruisci sempre la lista PDF (prende anche quelli in IDB)
@@ -701,9 +973,23 @@ function switchTab(tab) {
   if (tab === 'rosters') buildRosterPdfList();
 }
 
+
+document.getElementById('rosterPdfInput').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  if (typeof importPDF === 'function') {
+    await importPDF({ target: { files:[file], value:'' } });
+  }
+});
+
 // Boot
+document.getElementById('appVersionLabel').textContent = `v${APP_VERSION}`;
+
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
+  navigator.serviceWorker.register(`sw.js?v=${APP_VERSION}`).catch(err => {
+    console.warn('[SW] register failed:', err.message);
+  });
 }
 loadRoster();
 </script>
