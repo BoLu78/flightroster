@@ -61,6 +61,16 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
 .sync-info span { color:var(--accent); font-weight:600; }
 .sync-btn { background:var(--accent); color:white; border:none; border-radius:8px; padding:7px 14px; font-size:13px; font-weight:600; cursor:pointer; font-family:'IBM Plex Sans',sans-serif; }
 .sync-btn:active { opacity:0.8; }
+
+.roster-actions{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin:16px;
+}
+.roster-actions .sync-btn{
+  width:100%;
+}
 /* CALENDAR */
 .cal-header-row { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; margin:0 16px 3px; }
 .cal-header-row div { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted); text-align:center; padding:4px 0; }
@@ -235,6 +245,12 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
   <button class="sync-btn" onclick="loadRoster()">⟳ Aggiorna</button>
 </div>
 
+<div class="roster-actions">
+  <button class="sync-btn" onclick="triggerRosterImport()">📄 Importa roster PDF</button>
+  <button class="sync-btn" onclick="openCompanyRoster()">🌐 Apri sito roster azienda</button>
+</div>
+<input type="file" id="rosterPdfInput" accept="application/pdf" style="display:none">
+
 <!-- CAL VIEW -->
 <div class="view active" id="view-cal">
   <div class="cal-header-row">
@@ -306,7 +322,7 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
 
 <script>
 // ── Variabili globali ──
-const APP_VERSION = '2.8';
+const APP_VERSION = '2.9';
 const CONFIG = {
   BIN_ID: '69a8690d43b1c97be9b354e6',
   PDF_BIN_ID: '69a9c428d0ea881f40f272de'
@@ -803,6 +819,16 @@ function switchTab(tab) {
   // Quando si apre il tab Roster, ricostruisci la lista (può avere nuovi IDB)
   if (tab === 'rosters') buildRosterPdfList();
 }
+
+
+document.getElementById('rosterPdfInput').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  if (typeof importPDF === 'function') {
+    await importPDF({ target: { files:[file], value:'' } });
+  }
+});
 
 // Boot
 document.getElementById('appVersionLabel').textContent = `v${APP_VERSION}`;
