@@ -164,7 +164,7 @@ select.input{appearance:none;}
 </div>
 
 <script>
-const APP_VERSION = '3.1';
+const APP_VERSION = '3.2';
 const CONFIG = {
   BIN_ID: '69a8690d43b1c97be9b354e6',
   PDF_BIN_ID: '69a9c428d0ea881f40f272de',
@@ -460,8 +460,8 @@ async function importPDF(event) {
     try {
       const mk = getMonthKey(document.getElementById('fMonth').value);
       const fileName = 'roster_' + mk + '.pdf';
-      const githubPath = 'pdfs/' + fileName;
-      const publicUrl  = 'https://bolu78.github.io/flightroster/pdfs/' + fileName;
+      const githubPath = 'rosters/' + fileName;
+      const publicUrl  = 'https://bolu78.github.io/flightroster/rosters/' + fileName;
 
       // Converti PDF in base64
       const arrBuf  = await file.arrayBuffer();
@@ -573,7 +573,7 @@ function parseNeosRoster(text) {
   if (fhM) fhTotal=fhM[1].replace('.',':').replace(',',':');
   const offM=text.match(/Day\s+OFF[\s\S]*?Month[\s\S]*?\b(\d{1,2})\b/i);
   if (offM) offCount=offM[1];
-  const remMarker=text.match(/REMAINING_VALUE\s+(-?\d+)/);
+  const remMarker=text.match(/REMAINING_VALUE\s+(-?\d+)/i) || text.match(/Remaining\s+(-?\d+)/i);
   if (remMarker) remaining=remMarker[1];
   const targetMonth=mMatch?parseInt(mMatch[2],10):3;
   const chunks=text.split(/(?=\b\d{2}\/\d{2}\/\d{4}\s+(?:su|mo|tu|we|th|fr|sa)\b)/);

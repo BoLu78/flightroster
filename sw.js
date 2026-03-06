@@ -1,4 +1,4 @@
-const CACHE_NAME = 'flightroster-cache-v3.1';
+const CACHE_NAME = 'flightroster-cache-v3.2';
 const FILES = [
   './',
   './index.html',
