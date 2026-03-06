@@ -322,6 +322,81 @@ let currentDays = {};
 let previousDays = {};
 let changes = [];
 
+const LS_ROSTER_CACHE = 'roster_cache_v1';
+const LS_PDF_CACHE = 'roster_pdf_cache_v1';
+
+function idbOpen() {
+  return new Promise((resolve, reject) => {
+    if (!('indexedDB' in window)) {
+      reject(new Error('IndexedDB non supportato'));
+      return;
+    }
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(IDB_STORE)) {
+        db.createObjectStore(IDB_STORE);
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error || new Error('Errore apertura IndexedDB'));
+  });
+}
+
+async function idbSet(key, blob) {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).put(blob, key);
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error || new Error('Errore salvataggio PDF offline'));
+  });
+}
+
+async function idbGet(key) {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readonly');
+    const req = tx.objectStore(IDB_STORE).get(key);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => reject(req.error || new Error('Errore lettura PDF offline'));
+  });
+}
+
+async function idbDelete(key) {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).delete(key);
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error || new Error('Errore rimozione PDF offline'));
+  });
+}
+
+async function idbKeys() {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readonly');
+    const store = tx.objectStore(IDB_STORE);
+    const req = store.getAllKeys();
+    req.onsuccess = () => resolve((req.result || []).map(String));
+    req.onerror = () => reject(req.error || new Error('Errore lettura elenco PDF offline'));
+  });
+}
+
+function saveCache(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch(e) {}
+}
+
+function loadCache(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch(e) {
+    return null;
+  }
+}
+
 // ── PDF Roster (semplice: apri direttamente nel browser) ──
 
 async function buildRosterPdfList() {
@@ -583,11 +658,14 @@ async function loadRoster() {
   const btn = document.querySelector('.sync-btn');
   btn.textContent = '⟳ Carico...';
   btn.disabled = true;
+  let loadedOnline = false;
   try {
     const res = await fetch(API_URL + '/latest', { headers: { 'X-Access-Key': API_KEY } });
     const data = await res.json();
     const record = data.record || {};
     allRosters = parseRosterRecord(record);
+    saveCache(LS_ROSTER_CACHE, allRosters);
+    loadedOnline = true;
 
     const keys = Object.keys(allRosters).filter(k => k.match(/^\d{4}-\d{2}$/)).sort();
     const sel = document.getElementById('monthSelect');
@@ -610,12 +688,30 @@ async function loadRoster() {
       for (const [k, v] of Object.entries(allPdfs)) {
         if (!v.startsWith('https://bolu78.github.io/')) delete allPdfs[k];
       }
+      saveCache(LS_PDF_CACHE, allPdfs);
     } catch(e) { console.log('[PDF bin] load failed:', e); }
 
     document.getElementById('syncDate').textContent = new Date().toLocaleString('it-IT');
   } catch(e) {
     console.warn('[loadRoster] offline mode:', e.message);
-    document.getElementById('syncDate').textContent = 'Offline';
+    const cachedRosters = loadCache(LS_ROSTER_CACHE);
+    const cachedPdfs = loadCache(LS_PDF_CACHE);
+    if (cachedRosters && typeof cachedRosters === 'object') {
+      allRosters = cachedRosters;
+      const keys = Object.keys(allRosters).filter(k => k.match(/^\d{4}-\d{2}$/)).sort();
+      const sel = document.getElementById('monthSelect');
+      sel.innerHTML = '';
+      keys.forEach(k => {
+        const r = allRosters[k];
+        const opt = document.createElement('option');
+        opt.value = k; opt.textContent = r.month || k;
+        sel.appendChild(opt);
+      });
+      if (!currentMonthKey || !allRosters[currentMonthKey]) currentMonthKey = keys[keys.length-1] || null;
+      if (currentMonthKey) { sel.value = currentMonthKey; displayMonth(currentMonthKey); }
+    }
+    allPdfs = (cachedPdfs && typeof cachedPdfs === 'object') ? cachedPdfs : {};
+    document.getElementById('syncDate').textContent = loadedOnline ? new Date().toLocaleString('it-IT') : 'Offline (cache)';
   }
 
   // Costruisci sempre la lista PDF (prende anche quelli in IDB)
