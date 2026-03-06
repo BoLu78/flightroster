@@ -417,39 +417,63 @@ async function importPDF(event) {
     markChanged();
     justImported = true;
 
-    // ── FIX CLOUDINARY: usa /image/upload invece di /raw/upload ──
-    // I PDF caricati come "image" hanno URL pubblici senza autenticazione
+    // ── UPLOAD PDF SU GITHUB ──
     try {
       const mk = getMonthKey(document.getElementById('fMonth').value);
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('upload_preset', 'flightroster');
-      formData.append('public_id', 'roster_' + mk);
-      // NON aggiungere resource_type: il preset gestisce il tipo automaticamente
-      const cRes = await fetch('https://api.cloudinary.com/v1_1/dzlj6wrri/image/upload', {
-        method: 'POST',
-        body: formData
+      const fileName = 'roster_' + mk + '.pdf';
+      const githubPath = 'pdfs/' + fileName;
+      const publicUrl  = 'https://bolu78.github.io/flightroster/pdfs/' + fileName;
+
+      // Converti PDF in base64
+      const arrBuf  = await file.arrayBuffer();
+      const uint8   = new Uint8Array(arrBuf);
+      let binary = '';
+      for (let i = 0; i < uint8.length; i++) binary += String.fromCharCode(uint8[i]);
+      const base64 = btoa(binary);
+
+      // Controlla se il file esiste già (per avere lo SHA necessario all'update)
+      let sha = null;
+      try {
+        const check = await fetch(`https://api.github.com/repos/BoLu78/flightroster/contents/${githubPath}`, {
+          headers: { 'Authorization': 'token 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', 'Accept': 'application/vnd.github.v3+json' }
+        });
+        if (check.ok) { const d = await check.json(); sha = d.sha; }
+      } catch(e) {}
+
+      // Upload su GitHub
+      const body = {
+        message: `Upload roster PDF ${mk}`,
+        content: base64,
+        ...(sha ? { sha } : {})
+      };
+      const ghRes = await fetch(`https://api.github.com/repos/BoLu78/flightroster/contents/${githubPath}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': 'token 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',
+          'Accept': 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
       });
-      const cData = await cRes.json();
-      console.log('[Cloudinary] response:', cData);
-      if (cData.secure_url) {
-        // ── FIX: salva in struttura piatta { "2026-03": "url" } ──
-        // Normalizza prima per eliminare eventuali chiavi spurie
+      const ghData = await ghRes.json();
+      console.log('[GitHub] upload response:', ghData);
+
+      if (ghRes.ok) {
+        // Salva URL pubblico GitHub Pages nel bin PDF
         allPdfs = normalizePdfRecord(allPdfs);
-        allPdfs[mk] = cData.secure_url;
-        // Mantieni solo ultimi 4 mesi
+        allPdfs[mk] = publicUrl;
         const pdfKeys = Object.keys(allPdfs).filter(k=>k.match(/^\d{4}-\d{2}$/)).sort();
         if (pdfKeys.length > 4) pdfKeys.slice(0, pdfKeys.length-4).forEach(k=>delete allPdfs[k]);
         await fetch(`https://api.jsonbin.io/v3/b/${PDF_BIN_ID}`, {
           method: 'PUT',
           headers: {'Content-Type':'application/json','X-Access-Key':API_KEY},
-          body: JSON.stringify(allPdfs)  // struttura piatta, nessun wrapper
+          body: JSON.stringify(allPdfs)
         });
-        console.log('[PDF bin] saved:', allPdfs);
+        console.log('[GitHub] PDF disponibile su:', publicUrl);
       } else {
-        console.warn('[Cloudinary] no secure_url:', cData.error?.message || cData);
+        console.warn('[GitHub] upload fallito:', ghData.message);
       }
-    } catch(e) { console.log('[Cloudinary] upload failed:', e); }
+    } catch(e) { console.log('[GitHub] upload error:', e); }
 
     // Auto-save roster
     rosterData.month     = document.getElementById('fMonth').value;
