@@ -212,7 +212,7 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
 <body>
 
 <div class="topbar">
-  <h1>✈ FLIGHTROSTER <span style="font-size:10px;opacity:0.5;font-weight:400">v2.7</span></h1>
+  <h1>✈ FLIGHTROSTER <span id="appVersionLabel" style="font-size:10px;opacity:0.5;font-weight:400"></span></h1>
   <div style="display:flex;align-items:center;gap:6px">
     <button onclick="prevMonth()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:14px;cursor:pointer;color:var(--muted)">‹</button>
     <select id="monthSelect" onchange="switchMonth(this.value)" style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);border:1px solid var(--border);border-radius:6px;padding:3px 6px;background:var(--surface);cursor:pointer">
@@ -306,11 +306,18 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
 
 <script>
 // ── Variabili globali ──
-const BIN_ID     = '69a8690d43b1c97be9b354e6';
-const PDF_BIN_ID = '69a9c428d0ea881f40f272de';
-const API_KEY    = '$2a$10$zML8H2V0JzBwhx58kTx66.eL3u5VDf3XJCq3YdWHFJoZT6ikdWeeS';
-const API_URL    = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
-const PDF_API_URL= `https://api.jsonbin.io/v3/b/${PDF_BIN_ID}`;
+const APP_VERSION = '2.8';
+const CONFIG = {
+  BIN_ID: '69a8690d43b1c97be9b354e6',
+  PDF_BIN_ID: '69a9c428d0ea881f40f272de'
+};
+const API_URL    = `https://api.jsonbin.io/v3/b/${CONFIG.BIN_ID}`;
+const PDF_API_URL= `https://api.jsonbin.io/v3/b/${CONFIG.PDF_BIN_ID}`;
+
+async function secureFetch(url, options) {
+  console.warn('secureFetch placeholder — API calls should be proxied by backend');
+  return fetch(url, options);
+}
 const IDB_NAME   = 'FlightRosterDB';
 const IDB_STORE  = 'pdfs';
 const TODAY = 5;
@@ -321,6 +328,81 @@ let allPdfs = {};      // { "2026-03": "https://cloudinary_url..." }
 let currentDays = {};
 let previousDays = {};
 let changes = [];
+
+const LS_ROSTER_CACHE = 'roster_cache_v1';
+const LS_PDF_CACHE = 'roster_pdf_cache_v1';
+
+function idbOpen() {
+  return new Promise((resolve, reject) => {
+    if (!('indexedDB' in window)) {
+      reject(new Error('IndexedDB non supportato'));
+      return;
+    }
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(IDB_STORE)) {
+        db.createObjectStore(IDB_STORE);
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error || new Error('Errore apertura IndexedDB'));
+  });
+}
+
+async function idbSet(key, blob) {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).put(blob, key);
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error || new Error('Errore salvataggio PDF offline'));
+  });
+}
+
+async function idbGet(key) {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readonly');
+    const req = tx.objectStore(IDB_STORE).get(key);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => reject(req.error || new Error('Errore lettura PDF offline'));
+  });
+}
+
+async function idbDelete(key) {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).delete(key);
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error || new Error('Errore rimozione PDF offline'));
+  });
+}
+
+async function idbKeys() {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readonly');
+    const store = tx.objectStore(IDB_STORE);
+    const req = store.getAllKeys();
+    req.onsuccess = () => resolve((req.result || []).map(String));
+    req.onerror = () => reject(req.error || new Error('Errore lettura elenco PDF offline'));
+  });
+}
+
+function saveCache(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch(e) {}
+}
+
+function loadCache(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch(e) {
+    return null;
+  }
+}
 
 // ── PDF Roster (semplice: apri direttamente nel browser) ──
 
@@ -583,11 +665,14 @@ async function loadRoster() {
   const btn = document.querySelector('.sync-btn');
   btn.textContent = '⟳ Carico...';
   btn.disabled = true;
+  let loadedOnline = false;
   try {
-    const res = await fetch(API_URL + '/latest', { headers: { 'X-Access-Key': API_KEY } });
+    const res = await secureFetch(API_URL + '/latest');
     const data = await res.json();
     const record = data.record || {};
     allRosters = parseRosterRecord(record);
+    saveCache(LS_ROSTER_CACHE, allRosters);
+    loadedOnline = true;
 
     const keys = Object.keys(allRosters).filter(k => k.match(/^\d{4}-\d{2}$/)).sort();
     const sel = document.getElementById('monthSelect');
@@ -603,19 +688,37 @@ async function loadRoster() {
 
     // Carica URL PDF dal bin dedicato
     try {
-      const pRes = await fetch(PDF_API_URL + '/latest', { headers: { 'X-Access-Key': API_KEY } });
+      const pRes = await secureFetch(PDF_API_URL + '/latest');
       const pData = await pRes.json();
       allPdfs = normalizePdfRecord(pData.record || {});
       // Scarta URL non GitHub Pages (Cloudinary vecchi ecc.)
       for (const [k, v] of Object.entries(allPdfs)) {
         if (!v.startsWith('https://bolu78.github.io/')) delete allPdfs[k];
       }
+      saveCache(LS_PDF_CACHE, allPdfs);
     } catch(e) { console.log('[PDF bin] load failed:', e); }
 
     document.getElementById('syncDate').textContent = new Date().toLocaleString('it-IT');
   } catch(e) {
     console.warn('[loadRoster] offline mode:', e.message);
-    document.getElementById('syncDate').textContent = 'Offline';
+    const cachedRosters = loadCache(LS_ROSTER_CACHE);
+    const cachedPdfs = loadCache(LS_PDF_CACHE);
+    if (cachedRosters && typeof cachedRosters === 'object') {
+      allRosters = cachedRosters;
+      const keys = Object.keys(allRosters).filter(k => k.match(/^\d{4}-\d{2}$/)).sort();
+      const sel = document.getElementById('monthSelect');
+      sel.innerHTML = '';
+      keys.forEach(k => {
+        const r = allRosters[k];
+        const opt = document.createElement('option');
+        opt.value = k; opt.textContent = r.month || k;
+        sel.appendChild(opt);
+      });
+      if (!currentMonthKey || !allRosters[currentMonthKey]) currentMonthKey = keys[keys.length-1] || null;
+      if (currentMonthKey) { sel.value = currentMonthKey; displayMonth(currentMonthKey); }
+    }
+    allPdfs = (cachedPdfs && typeof cachedPdfs === 'object') ? cachedPdfs : {};
+    document.getElementById('syncDate').textContent = loadedOnline ? new Date().toLocaleString('it-IT') : 'Offline (cache)';
   }
 
   // Costruisci sempre la lista PDF (prende anche quelli in IDB)
@@ -702,8 +805,12 @@ function switchTab(tab) {
 }
 
 // Boot
+document.getElementById('appVersionLabel').textContent = `v${APP_VERSION}`;
+
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
+  navigator.serviceWorker.register(`sw.js?v=${APP_VERSION}`).catch(err => {
+    console.warn('[SW] register failed:', err.message);
+  });
 }
 loadRoster();
 </script>
