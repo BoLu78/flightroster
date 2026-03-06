@@ -164,16 +164,20 @@ select.input{appearance:none;}
 </div>
 
 <script>
-const APP_VERSION = '2.9';
+const APP_VERSION = '3.0';
 const CONFIG = {
   BIN_ID: '69a8690d43b1c97be9b354e6',
-  PDF_BIN_ID: '69a9c428d0ea881f40f272de'
+  PDF_BIN_ID: '69a9c428d0ea881f40f272de',
+  API_KEY: '$2a$10$zML8H2V0JzBwhx58kTx66.eL3u5VDf3XJCq3YdWHFJoZT6ikdWeeS'
 };
 const ADMIN_PWD  = 'neos787';
 
-async function secureFetch(url, options) {
-  console.warn('secureFetch placeholder — API calls should be proxied by backend');
-  return fetch(url, options);
+async function secureFetch(url, options = {}) {
+  const headers = { ...(options.headers || {}) };
+  if (typeof url === 'string' && url.includes('api.jsonbin.io') && CONFIG?.API_KEY && !headers['X-Access-Key']) {
+    headers['X-Access-Key'] = CONFIG.API_KEY;
+  }
+  return fetch(url, { ...options, headers });
 }
 
 

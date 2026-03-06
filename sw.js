@@ -1,4 +1,4 @@
-const CACHE_NAME = 'flightroster-cache-v2.9';
+const CACHE_NAME = 'flightroster-cache-v3.0';
 const FILES = [
   './',
   './index.html',
@@ -14,10 +14,15 @@ self.addEventListener('install', event => {
 
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(names => Promise.all(
-      names.filter(name => name !== CACHE_NAME).map(name => caches.delete(name))
-    )).then(() => self.clients.claim())
+    caches.keys().then(keys =>
+      Promise.all(
+        keys
+          .filter(key => key !== CACHE_NAME)
+          .map(key => caches.delete(key))
+      )
+    )
   );
+  self.clients.claim();
 });
 
 self.addEventListener('fetch', event => {
