@@ -243,6 +243,12 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
   <button class="sync-btn" onclick="loadRoster()">⟳ Aggiorna</button>
 </div>
 
+<div class="roster-actions">
+  <button class="sync-btn" onclick="triggerRosterImport()">📄 Importa roster PDF</button>
+  <button class="sync-btn" onclick="openCompanyRoster()">🌐 Apri portale Neos</button>
+</div>
+<input type="file" id="rosterPdfInput" accept="application/pdf" style="display:none">
+
 <!-- CAL VIEW -->
 <div class="view active" id="view-cal">
   <div class="cal-header-row">
