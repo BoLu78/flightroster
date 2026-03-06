@@ -93,6 +93,12 @@ select.input{appearance:none;}
   <div id="daysList"></div>
 
   <div class="section-title">Manutenzione App</div>
+  <div style="background:var(--surface);border:1px solid #fcd34d;border-radius:14px;padding:16px;margin-bottom:10px;">
+    <div style="font-size:14px;color:var(--muted);margin-bottom:4px;">🗑 <b>Reset PDF bin</b> — cancella tutti gli URL PDF salvati nel cloud (Cloudinary vecchi, ecc.).</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Dopo il reset, ricarica il PDF dall'admin per salvare il nuovo URL GitHub Pages.</div>
+    <button class="btn" style="background:var(--warn)" onclick="resetPdfBin()">🗑 Svuota PDF Bin</button>
+    <div id="pdfResetStatus" style="margin-top:10px;font-size:13px;display:none"></div>
+  </div>
   <div style="background:var(--surface);border:1px solid #fca5a5;border-radius:14px;padding:16px;margin-bottom:4px;">
     <div style="font-size:14px;color:var(--muted);margin-bottom:4px;">⚠️ <b>Reset completo</b> — cancella cache, IndexedDB, Service Worker e ricarica l'app all'ultima versione.</div>
     <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Usa questo pulsante se l'app mostra dati vecchi o si comporta in modo strano.</div>
@@ -663,6 +669,33 @@ async function resetApp() {
   setTimeout(() => {
     window.location.href = 'index.html?v=' + Date.now();
   }, 2000);
+}
+
+async function resetPdfBin() {
+  const pwd = prompt('🔒 Password per il reset PDF:');
+  if (pwd !== ADMIN_PWD) { if (pwd !== null) alert('❌ Password errata'); return; }
+  const status = document.getElementById('pdfResetStatus');
+  status.style.display = 'block';
+  status.style.color = 'var(--muted)';
+  status.textContent = '⏳ Reset PDF bin in corso...';
+  try {
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${PDF_BIN_ID}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-Access-Key': API_KEY },
+      body: JSON.stringify({})
+    });
+    if (res.ok) {
+      allPdfs = {};
+      status.style.color = 'var(--accent2)';
+      status.textContent = '✅ PDF bin svuotato! Ora ricarica il PDF dall\'admin per aggiornare il link.';
+    } else {
+      status.style.color = 'var(--danger)';
+      status.textContent = '❌ Errore: ' + res.status;
+    }
+  } catch(e) {
+    status.style.color = 'var(--danger)';
+    status.textContent = '❌ Errore: ' + e.message;
+  }
 }
 
 async function saveRoster() {
