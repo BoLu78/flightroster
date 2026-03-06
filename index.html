@@ -212,7 +212,7 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
 <body>
 
 <div class="topbar">
-  <h1>✈ FLIGHTROSTER <span style="font-size:10px;opacity:0.5;font-weight:400">v2.7</span></h1>
+  <h1>✈ FLIGHTROSTER <span id="appVersionLabel" style="font-size:10px;opacity:0.5;font-weight:400"></span></h1>
   <div style="display:flex;align-items:center;gap:6px">
     <button onclick="prevMonth()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:14px;cursor:pointer;color:var(--muted)">‹</button>
     <select id="monthSelect" onchange="switchMonth(this.value)" style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);border:1px solid var(--border);border-radius:6px;padding:3px 6px;background:var(--surface);cursor:pointer">
@@ -306,11 +306,18 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
 
 <script>
 // ── Variabili globali ──
-const BIN_ID     = '69a8690d43b1c97be9b354e6';
-const PDF_BIN_ID = '69a9c428d0ea881f40f272de';
-const API_KEY    = '$2a$10$zML8H2V0JzBwhx58kTx66.eL3u5VDf3XJCq3YdWHFJoZT6ikdWeeS';
-const API_URL    = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
-const PDF_API_URL= `https://api.jsonbin.io/v3/b/${PDF_BIN_ID}`;
+const APP_VERSION = '2.8';
+const CONFIG = {
+  BIN_ID: '69a8690d43b1c97be9b354e6',
+  PDF_BIN_ID: '69a9c428d0ea881f40f272de'
+};
+const API_URL    = `https://api.jsonbin.io/v3/b/${CONFIG.BIN_ID}`;
+const PDF_API_URL= `https://api.jsonbin.io/v3/b/${CONFIG.PDF_BIN_ID}`;
+
+async function secureFetch(url, options) {
+  console.warn('secureFetch placeholder — API calls should be proxied by backend');
+  return fetch(url, options);
+}
 const IDB_NAME   = 'FlightRosterDB';
 const IDB_STORE  = 'pdfs';
 const TODAY = 5;
@@ -660,7 +667,7 @@ async function loadRoster() {
   btn.disabled = true;
   let loadedOnline = false;
   try {
-    const res = await fetch(API_URL + '/latest', { headers: { 'X-Access-Key': API_KEY } });
+    const res = await secureFetch(API_URL + '/latest');
     const data = await res.json();
     const record = data.record || {};
     allRosters = parseRosterRecord(record);
@@ -681,7 +688,7 @@ async function loadRoster() {
 
     // Carica URL PDF dal bin dedicato
     try {
-      const pRes = await fetch(PDF_API_URL + '/latest', { headers: { 'X-Access-Key': API_KEY } });
+      const pRes = await secureFetch(PDF_API_URL + '/latest');
       const pData = await pRes.json();
       allPdfs = normalizePdfRecord(pData.record || {});
       // Scarta URL non GitHub Pages (Cloudinary vecchi ecc.)
@@ -798,8 +805,12 @@ function switchTab(tab) {
 }
 
 // Boot
+document.getElementById('appVersionLabel').textContent = `v${APP_VERSION}`;
+
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
+  navigator.serviceWorker.register(`sw.js?v=${APP_VERSION}`).catch(err => {
+    console.warn('[SW] register failed:', err.message);
+  });
 }
 loadRoster();
 </script>

@@ -57,7 +57,7 @@ select.input{appearance:none;}
 </head>
 <body>
 <div class="topbar">
-  <h1>⚙ ROSTER ADMIN <span style="font-size:10px;opacity:0.6;font-weight:400">v6.3</span></h1>
+  <h1>⚙ ROSTER ADMIN <span id="appVersionLabel" style="font-size:10px;opacity:0.6;font-weight:400"></span></h1>
   <a href="index.html" class="back-btn">← Roster</a>
 </div>
 
@@ -164,10 +164,26 @@ select.input{appearance:none;}
 </div>
 
 <script>
-const BIN_ID     = '69a8690d43b1c97be9b354e6';
-const PDF_BIN_ID = '69a9c428d0ea881f40f272de';
-const API_KEY    = '$2a$10$zML8H2V0JzBwhx58kTx66.eL3u5VDf3XJCq3YdWHFJoZT6ikdWeeS';
+const APP_VERSION = '2.8';
+const CONFIG = {
+  BIN_ID: '69a8690d43b1c97be9b354e6',
+  PDF_BIN_ID: '69a9c428d0ea881f40f272de'
+};
 const ADMIN_PWD  = 'neos787';
+
+async function secureFetch(url, options) {
+  console.warn('secureFetch placeholder — API calls should be proxied by backend');
+  return fetch(url, options);
+}
+
+
+function getGithubToken() {
+  const cached = sessionStorage.getItem('github_token') || '';
+  const token = prompt('GitHub token (repo scope) per upload PDF:', cached);
+  if (!token) return null;
+  sessionStorage.setItem('github_token', token.trim());
+  return token.trim();
+}
 const WDS        = ['dom','lun','mar','mer','gio','ven','sab'];
 const WD_NAMES   = {lun:'Lun',mar:'Mar',mer:'Mer',gio:'Gio',ven:'Ven',sab:'Sab',dom:'Dom'};
 
@@ -220,7 +236,7 @@ function doLogin() {
 async function loadData() {
   if (justImported) return;
   try {
-    const res  = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, { headers:{'X-Access-Key':API_KEY} });
+    const res  = await secureFetch(`https://api.jsonbin.io/v3/b/${CONFIG.BIN_ID}/latest`);
     const data = await res.json();
     const record = data.record || {};
     const monthKeys = Object.keys(record).filter(k => k.match(/^\d{4}-\d{2}$/)).sort();
@@ -236,7 +252,7 @@ async function loadData() {
     }
     populateForm();
     try {
-      const pRes  = await fetch(`https://api.jsonbin.io/v3/b/${PDF_BIN_ID}/latest`, { headers:{'X-Access-Key':API_KEY} });
+      const pRes  = await secureFetch(`https://api.jsonbin.io/v3/b/${CONFIG.PDF_BIN_ID}/latest`);
       const pData = await pRes.json();
       // ── FIX: normalizza sempre ──
       allPdfs = normalizePdfRecord(pData.record || {});
@@ -247,8 +263,8 @@ async function loadData() {
       }
       if (needsClean) {
         const cleanBody = Object.keys(allPdfs).length > 0 ? allPdfs : {_reset:1};
-        fetch('https://api.jsonbin.io/v3/b/'+PDF_BIN_ID, {
-          method:'PUT', headers:{'Content-Type':'application/json','X-Access-Key':API_KEY},
+        secureFetch('https://api.jsonbin.io/v3/b/'+CONFIG.PDF_BIN_ID, {
+          method:'PUT', headers:{'Content-Type':'application/json'},
           body:JSON.stringify(cleanBody)
         });
         console.log('[Admin] PDF bin auto-pulito: rimossi URL non GitHub');
@@ -451,12 +467,13 @@ async function importPDF(event) {
       const base64 = btoa(binary);
 
       // Controlla se il file esiste già (per avere lo SHA necessario all'update)
-      // Token offuscato per evitare il rilevamento del secret scanning di GitHub
-      const _t = [atob('Z2hwX3VHRFVucGVvczdCUQ=='), atob('R1Ztc0pOQWx5ODFuM24zc1I2MmlaaUk0')].join('');
+      const githubToken = getGithubToken();
+      if (!githubToken) throw new Error('Upload annullato: token GitHub mancante');
+
       let sha = null;
       try {
         const check = await fetch(`https://api.github.com/repos/BoLu78/flightroster/contents/${githubPath}`, {
-          headers: { 'Authorization': 'token ' + _t, 'Accept': 'application/vnd.github.v3+json' }
+          headers: { 'Authorization': 'token ' + githubToken, 'Accept': 'application/vnd.github.v3+json' }
         });
         if (check.ok) { const d = await check.json(); sha = d.sha; }
       } catch(e) {}
@@ -470,7 +487,7 @@ async function importPDF(event) {
       const ghRes = await fetch(`https://api.github.com/repos/BoLu78/flightroster/contents/${githubPath}`, {
         method: 'PUT',
         headers: {
-          'Authorization': 'token ' + _t,
+          'Authorization': 'token ' + githubToken,
           'Accept': 'application/vnd.github.v3+json',
           'Content-Type': 'application/json'
         },
@@ -485,9 +502,9 @@ async function importPDF(event) {
         allPdfs[mk] = publicUrl;
         const pdfKeys = Object.keys(allPdfs).filter(k=>k.match(/^\d{4}-\d{2}$/)).sort();
         if (pdfKeys.length > 4) pdfKeys.slice(0, pdfKeys.length-4).forEach(k=>delete allPdfs[k]);
-        await fetch(`https://api.jsonbin.io/v3/b/${PDF_BIN_ID}`, {
+        await secureFetch(`https://api.jsonbin.io/v3/b/${CONFIG.PDF_BIN_ID}`, {
           method: 'PUT',
-          headers: {'Content-Type':'application/json','X-Access-Key':API_KEY},
+          headers: {'Content-Type':'application/json'},
           body: JSON.stringify(allPdfs)
         });
         console.log('[GitHub] PDF disponibile su:', publicUrl);
@@ -506,9 +523,9 @@ async function importPDF(event) {
     allRosters[mk] = Object.assign({}, rosterData);
     const autoKeys = Object.keys(allRosters).filter(k=>k.match(/^\d{4}-\d{2}$/)).sort();
     if (autoKeys.length > 4) autoKeys.slice(0,autoKeys.length-4).forEach(k=>delete allRosters[k]);
-    fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+    secureFetch(`https://api.jsonbin.io/v3/b/${CONFIG.BIN_ID}`, {
       method:'PUT',
-      headers:{'Content-Type':'application/json','X-Access-Key':API_KEY},
+      headers:{'Content-Type':'application/json'},
       body: JSON.stringify(allRosters)
     });
 
@@ -692,9 +709,9 @@ async function resetPdfBin() {
   status.style.color = 'var(--muted)';
   status.textContent = '⏳ Reset PDF bin in corso...';
   try {
-    const res = await fetch(`https://api.jsonbin.io/v3/b/${PDF_BIN_ID}`, {
+    const res = await secureFetch(`https://api.jsonbin.io/v3/b/${CONFIG.PDF_BIN_ID}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'X-Access-Key': API_KEY },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({_reset:1})
     });
     if (res.ok) {
@@ -724,11 +741,12 @@ async function saveRoster() {
     allRosters[mk2]=Object.assign({},rosterData);
     const allKeys=Object.keys(allRosters).filter(k=>k.match(/^\d{4}-\d{2}$/)).sort();
     if (allKeys.length>4) allKeys.slice(0,allKeys.length-4).forEach(k=>delete allRosters[k]);
-    await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`,{method:'PUT',headers:{'Content-Type':'application/json','X-Access-Key':API_KEY},body:JSON.stringify(allRosters)});
+    await secureFetch(`https://api.jsonbin.io/v3/b/${CONFIG.BIN_ID}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(allRosters)});
     btn.textContent='✅ Salvato!'; hasChanges=false;
     setTimeout(()=>{document.getElementById('saveBar').style.display='none';btn.textContent='💾 Salva Roster su Cloud';btn.disabled=false;},2000);
   } catch(e) { btn.textContent='❌ Errore — riprova'; btn.disabled=false; }
 }
+document.getElementById('appVersionLabel').textContent = `v${APP_VERSION}`;
 </script>
 </body>
 </html>
