@@ -635,6 +635,7 @@ async function resetApp() {
   }, 2000);
 }
 
+async function saveRoster() {
   const btn=document.querySelector('.save-btn-main');
   btn.textContent='💾 Salvataggio...'; btn.disabled=true;
   rosterData.month     = document.getElementById('fMonth').value;
