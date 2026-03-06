@@ -229,7 +229,6 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
       <option>—</option>
     </select>
     <button onclick="nextMonth()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:14px;cursor:pointer;color:var(--muted)">›</button>
-    <a href="admin.html" style="font-size:11px;color:var(--warn);font-weight:700;text-decoration:none;border:1px solid var(--warn);border-radius:6px;padding:3px 7px;margin-left:4px">ADMIN</a>
   </div>
 </div>
 
@@ -237,7 +236,6 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
   <div class="stat"><div class="sv" id="statFH">—</div><div class="sk">Ore Volo</div></div>
   <div class="stat"><div class="sv green" id="statOff">—</div><div class="sk">Giorni OFF</div></div>
   <div class="stat"><div class="sv orange" id="statRem">—</div><div class="sk">Remaining</div></div>
-  <div class="stat"><div class="sv" style="font-size:14px;padding-top:3px">MXP</div><div class="sk">Base</div></div>
 </div>
 
 <div class="sync-bar">
@@ -271,6 +269,16 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
 
 <!-- ROSTER PDF VIEW -->
 <div class="view" id="view-rosters">
+  <div id="rosterViewerContainer" style="margin:16px;">
+    <iframe id="rosterViewer"
+            title="Roster PDF Viewer"
+            style="width:100%;height:60vh;border:1px solid var(--border);border-radius:8px;background:white;"></iframe>
+  </div>
+  <div class="roster-actions">
+    <button class="sync-btn" onclick="triggerRosterImport()">📄 Importa roster PDF</button>
+    <button class="sync-btn" onclick="openCompanyRoster()">🌐 Apri portale Neos</button>
+  </div>
+  <input type="file" id="rosterPdfInput" accept="application/pdf" style="display:none">
   <div style="padding:8px 0 12px">
     <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px">📄 PDF Roster per mese</div>
     <div id="rosterPdfList"><div class="loading">Caricamento...</div></div>
@@ -322,7 +330,7 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
 
 <script>
 // ── Variabili globali ──
-const APP_VERSION = '3.0';
+const APP_VERSION = '3.1';
 const CONFIG = {
   BIN_ID: '69a8690d43b1c97be9b354e6',
   PDF_BIN_ID: '69a9c428d0ea881f40f272de',
@@ -340,11 +348,12 @@ async function secureFetch(url, options = {}) {
 }
 const IDB_NAME   = 'FlightRosterDB';
 const IDB_STORE  = 'pdfs';
-const TODAY = 5;
+const TODAY = new Date().getDate();
 
 let currentMonthKey = null;
 let allRosters = {};
 let allPdfs = {};      // { "2026-03": "https://cloudinary_url..." }
+let rosterViewerBlobUrl = null;
 let currentDays = {};
 let previousDays = {};
 let changes = [];
@@ -579,6 +588,40 @@ async function importPDF(event) {
 
 // ── PDF Roster (semplice: apri direttamente nel browser) ──
 
+async function updateRosterViewer(key = currentMonthKey) {
+  const viewer = document.getElementById('rosterViewer');
+  if (!viewer) return;
+
+  if (rosterViewerBlobUrl) {
+    URL.revokeObjectURL(rosterViewerBlobUrl);
+    rosterViewerBlobUrl = null;
+  }
+
+  if (!key) {
+    viewer.removeAttribute('src');
+    return;
+  }
+
+  const onlineUrl = allPdfs[key];
+  if (onlineUrl) {
+    viewer.src = onlineUrl;
+    return;
+  }
+
+  try {
+    const blob = await idbGet(key);
+    if (blob) {
+      rosterViewerBlobUrl = URL.createObjectURL(blob);
+      viewer.src = rosterViewerBlobUrl;
+      return;
+    }
+  } catch (e) {
+    console.warn('Viewer offline load error:', e.message);
+  }
+
+  viewer.removeAttribute('src');
+}
+
 async function buildRosterPdfList() {
   const container = document.getElementById('rosterPdfList');
   if (!container) return;
@@ -595,6 +638,7 @@ async function buildRosterPdfList() {
         <div style="font-size:40px;margin-bottom:12px">📭</div>
         <p>Nessun roster PDF disponibile.<br>Carica il PDF dall'admin.</p>
       </div>`;
+    await updateRosterViewer();
     return;
   }
 
@@ -624,6 +668,8 @@ async function buildRosterPdfList() {
     `;
     container.appendChild(card);
   }
+
+  await updateRosterViewer();
 }
 
 async function openOfflinePdf(key) {
@@ -922,6 +968,7 @@ function displayMonth(key) {
   buildCalendar(currentDays, changedDays);
   buildList(currentDays, changedDays);
   buildChanges(changes);
+  updateRosterViewer(key);
 }
 
 function switchMonth(key) { if (key && allRosters[key]) displayMonth(key); }
