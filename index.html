@@ -330,7 +330,7 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
 
 <script>
 // ── Variabili globali ──
-const APP_VERSION = '3.2';
+const APP_VERSION = '3.3';
 const CONFIG = {
   BIN_ID: '69a8690d43b1c97be9b354e6',
   PDF_BIN_ID: '69a9c428d0ea881f40f272de',
@@ -474,8 +474,8 @@ function parseNeosRoster(text) {
   if (fhM) fhTotal=fhM[1].replace('.',':').replace(',',':');
   const offM=text.match(/Day\s+OFF[\s\S]*?Month[\s\S]*?\b(\d{1,2})\b/i);
   if (offM) offCount=offM[1];
-  const remMarker=text.match(/REMAINING_VALUE\s+(-?\d+)/i) || text.match(/Remaining\s+(-?\d+)/i);
-  if (remMarker) remaining=remMarker[1];
+  const remMatch = text.match(/Remaining\s*(-?\d+)/i);
+  if (remMatch) remaining = remMatch[1];
   const targetMonth=mMatch?parseInt(mMatch[2],10):new Date().getMonth()+1;
   const chunks=text.split(/(?=\b\d{2}\/\d{2}\/\d{4}\s+(?:su|mo|tu|we|th|fr|sa)\b)/);
   const rawChunks={};
