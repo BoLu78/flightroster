@@ -182,20 +182,22 @@ function getMonthKey(monthStr) {
   return `${y}-${m}`;
 }
 
-// ── FIX: normalizza struttura bin PDF (gestisce chiavi annidate errate) ──
+// Normalizza il record PDF: estrae SOLO coppie {chiave-mese: url-stringa}
 function normalizePdfRecord(rec) {
   if (!rec || typeof rec !== 'object') return {};
-  // Struttura corretta: { "2026-03": "https://..." }
-  const directKeys = Object.keys(rec).filter(k => k.match(/^\d{4}-\d{2}$/));
-  if (directKeys.length > 0) return rec;
-  // Struttura annidata errata: { "pdfs": { "2026-03": "https://..." } }
-  for (const val of Object.values(rec)) {
-    if (val && typeof val === 'object') {
-      const nested = Object.keys(val).filter(k => k.match(/^\d{4}-\d{2}$/));
-      if (nested.length > 0) return val;
+  const result = {};
+  for (const [k, v] of Object.entries(rec)) {
+    if (k.match(/^\d{4}-\d{2}$/) && typeof v === 'string' && v.startsWith('http')) {
+      result[k] = v;
+    } else if (v && typeof v === 'object') {
+      for (const [k2, v2] of Object.entries(v)) {
+        if (k2.match(/^\d{4}-\d{2}$/) && typeof v2 === 'string' && v2.startsWith('http')) {
+          if (!result[k2]) result[k2] = v2;
+        }
+      }
     }
   }
-  return {};
+  return result;
 }
 
 function doLogin() {
@@ -432,6 +434,8 @@ async function importPDF(event) {
       console.log('[Cloudinary] response:', cData);
       if (cData.secure_url) {
         // ── FIX: salva in struttura piatta { "2026-03": "url" } ──
+        // Normalizza prima per eliminare eventuali chiavi spurie
+        allPdfs = normalizePdfRecord(allPdfs);
         allPdfs[mk] = cData.secure_url;
         // Mantieni solo ultimi 4 mesi
         const pdfKeys = Object.keys(allPdfs).filter(k=>k.match(/^\d{4}-\d{2}$/)).sort();

@@ -790,25 +790,27 @@ function parseRosterRecord(record) {
   return {};
 }
 
-// Normalizza il record PDF: gestisce struttura piatta {"2026-03":"url"} 
-// e struttura annidata {"pdfs":{"2026-03":"url"}} o {"record":{...}}
+// Normalizza il record PDF: estrae SOLO coppie {chiave-mese: url-stringa}
+// Gestisce strutture miste tipo {pdfs:{...}, "2026-02":"url"} 
 function normalizePdfRecord(rec) {
   if (!rec || typeof rec !== 'object') return {};
-  // Se ha chiavi tipo "2026-03" direttamente → già ok
-  const directKeys = Object.keys(rec).filter(k => k.match(/^\d{4}-\d{2}$/));
-  if (directKeys.length > 0) return rec;
-  // Altrimenti cerca il primo valore oggetto che contenga chiavi mese
-  for (const val of Object.values(rec)) {
-    if (val && typeof val === 'object') {
-      const nested = Object.keys(val).filter(k => k.match(/^\d{4}-\d{2}$/));
-      if (nested.length > 0) return val;
-      // Cerca anche URL diretti (valore stringa con chiave mese dentro)
-      const urlKeys = Object.keys(val).filter(k => typeof val[k] === 'string' && val[k].startsWith('http'));
-      if (urlKeys.length > 0) return val;
+  const result = {};
+  // Scansiona tutte le chiavi del record
+  for (const [k, v] of Object.entries(rec)) {
+    if (k.match(/^\d{4}-\d{2}$/) && typeof v === 'string' && v.startsWith('http')) {
+      // Chiave mese con URL diretto → tienila
+      result[k] = v;
+    } else if (v && typeof v === 'object') {
+      // Chiave annidata (es. "pdfs") → cerca dentro
+      for (const [k2, v2] of Object.entries(v)) {
+        if (k2.match(/^\d{4}-\d{2}$/) && typeof v2 === 'string' && v2.startsWith('http')) {
+          // Prendi solo se non abbiamo già una versione più recente
+          if (!result[k2]) result[k2] = v2;
+        }
+      }
     }
   }
-  // Fallback: ritorna il record così com'è
-  return rec;
+  return result;
 }
 
 async function loadRoster() {
