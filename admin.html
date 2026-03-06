@@ -240,6 +240,19 @@ async function loadData() {
       const pData = await pRes.json();
       // ── FIX: normalizza sempre ──
       allPdfs = normalizePdfRecord(pData.record || {});
+      // Auto-pulizia: rimuovi URL non GitHub Pages (es. Cloudinary vecchi)
+      let needsClean = false;
+      for (const [k, v] of Object.entries(allPdfs)) {
+        if (!v.startsWith('https://bolu78.github.io/')) { delete allPdfs[k]; needsClean = true; }
+      }
+      if (needsClean) {
+        const cleanBody = Object.keys(allPdfs).length > 0 ? allPdfs : {_reset:1};
+        fetch('https://api.jsonbin.io/v3/b/'+PDF_BIN_ID, {
+          method:'PUT', headers:{'Content-Type':'application/json','X-Access-Key':API_KEY},
+          body:JSON.stringify(cleanBody)
+        });
+        console.log('[Admin] PDF bin auto-pulito: rimossi URL non GitHub');
+      }
       console.log('[Admin] allPdfs:', allPdfs);
     } catch(e) { console.log('PDF load failed', e); }
   } catch(e) {
@@ -682,7 +695,7 @@ async function resetPdfBin() {
     const res = await fetch(`https://api.jsonbin.io/v3/b/${PDF_BIN_ID}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'X-Access-Key': API_KEY },
-      body: JSON.stringify({})
+      body: JSON.stringify({_reset:1})
     });
     if (res.ok) {
       allPdfs = {};

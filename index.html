@@ -606,6 +606,10 @@ async function loadRoster() {
       const pRes = await fetch(PDF_API_URL + '/latest', { headers: { 'X-Access-Key': API_KEY } });
       const pData = await pRes.json();
       allPdfs = normalizePdfRecord(pData.record || {});
+      // Scarta URL non GitHub Pages (Cloudinary vecchi ecc.)
+      for (const [k, v] of Object.entries(allPdfs)) {
+        if (!v.startsWith('https://bolu78.github.io/')) delete allPdfs[k];
+      }
     } catch(e) { console.log('[PDF bin] load failed:', e); }
 
     document.getElementById('syncDate').textContent = new Date().toLocaleString('it-IT');
