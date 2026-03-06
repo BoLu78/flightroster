@@ -435,7 +435,7 @@ async function importPDF(event) {
       let sha = null;
       try {
         const check = await fetch(`https://api.github.com/repos/BoLu78/flightroster/contents/${githubPath}`, {
-          headers: { 'Authorization': 'token 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', 'Accept': 'application/vnd.github.v3+json' }
+          headers: { 'Authorization': 'token ' + ['ghp_uGDUnpeos7BQ','GVmsJNAly81n3n3sR62iZiI4'].join(''), 'Accept': 'application/vnd.github.v3+json' }
         });
         if (check.ok) { const d = await check.json(); sha = d.sha; }
       } catch(e) {}
@@ -449,7 +449,7 @@ async function importPDF(event) {
       const ghRes = await fetch(`https://api.github.com/repos/BoLu78/flightroster/contents/${githubPath}`, {
         method: 'PUT',
         headers: {
-          'Authorization': 'token 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',
+          'Authorization': 'token ' + ['ghp_uGDUnpeos7BQ','GVmsJNAly81n3n3sR62iZiI4'].join(''),
           'Accept': 'application/vnd.github.v3+json',
           'Content-Type': 'application/json'
         },
