@@ -790,6 +790,27 @@ function parseRosterRecord(record) {
   return {};
 }
 
+// Normalizza il record PDF: gestisce struttura piatta {"2026-03":"url"} 
+// e struttura annidata {"pdfs":{"2026-03":"url"}} o {"record":{...}}
+function normalizePdfRecord(rec) {
+  if (!rec || typeof rec !== 'object') return {};
+  // Se ha chiavi tipo "2026-03" direttamente → già ok
+  const directKeys = Object.keys(rec).filter(k => k.match(/^\d{4}-\d{2}$/));
+  if (directKeys.length > 0) return rec;
+  // Altrimenti cerca il primo valore oggetto che contenga chiavi mese
+  for (const val of Object.values(rec)) {
+    if (val && typeof val === 'object') {
+      const nested = Object.keys(val).filter(k => k.match(/^\d{4}-\d{2}$/));
+      if (nested.length > 0) return val;
+      // Cerca anche URL diretti (valore stringa con chiave mese dentro)
+      const urlKeys = Object.keys(val).filter(k => typeof val[k] === 'string' && val[k].startsWith('http'));
+      if (urlKeys.length > 0) return val;
+    }
+  }
+  // Fallback: ritorna il record così com'è
+  return rec;
+}
+
 async function loadRoster() {
   const btn = document.querySelector('.sync-btn');
   btn.textContent = '⟳ Carico...';
@@ -816,7 +837,7 @@ async function loadRoster() {
     try {
       const pRes = await fetch(PDF_API_URL + '/latest', { headers: { 'X-Access-Key': API_KEY } });
       const pData = await pRes.json();
-      allPdfs = pData.record || {};
+      allPdfs = normalizePdfRecord(pData.record || {});
     } catch(e) { console.log('[PDF bin] load failed:', e); }
 
     document.getElementById('syncDate').textContent = new Date().toLocaleString('it-IT');

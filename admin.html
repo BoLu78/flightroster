@@ -15,12 +15,9 @@
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;min-height:100vh;padding-bottom:40px;}
-
 .topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:calc(14px + var(--safe-top)) 18px 14px;display:flex;justify-content:space-between;align-items:center;}
 .topbar h1{font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--warn);font-weight:700;}
 .back-btn{font-size:13px;color:var(--accent);text-decoration:none;font-weight:600;}
-
-/* LOGIN */
 .login-wrap{display:flex;align-items:center;justify-content:center;min-height:80vh;padding:24px;}
 .login-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:32px 28px;width:100%;max-width:360px;}
 .login-card h2{font-size:22px;font-weight:700;margin-bottom:8px;}
@@ -32,22 +29,13 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 .btn.danger{background:var(--danger);}
 .btn.green{background:var(--accent2);}
 .err{color:var(--danger);font-size:13px;margin-top:8px;display:none;}
-
-/* ADMIN */
 .admin-wrap{display:none;padding:16px;}
 .section-title{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin:20px 0 10px;}
-.info-bar{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;}
-.info-bar .label{font-size:13px;color:var(--muted);}
-.info-bar .val{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--accent);}
-
-/* DAY EDITOR */
 .day-row{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;}
 .day-row:active{opacity:0.8;}
 .day-row .dr-date{font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;}
 .day-row .dr-info{font-size:13px;color:var(--muted);margin-top:2px;}
 .day-row .dr-icon{font-size:20px;}
-
-/* EDIT MODAL */
 .edit-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;align-items:flex-end;}
 .edit-modal.open{display:flex;}
 .edit-sheet{background:var(--surface);border-radius:24px 24px 0 0;padding:24px 20px calc(24px + var(--safe-bottom));width:100%;max-height:90vh;overflow-y:auto;animation:slideup 0.3s ease;}
@@ -60,25 +48,19 @@ select.input{appearance:none;}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .btn-row{display:flex;gap:10px;margin-top:20px;}
 .btn-row .btn{flex:1;}
-
-/* STATS EDITOR */
 .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
 .stats-grid .field{margin-bottom:0;}
-
-/* SAVE BAR */
 .save-bar{position:fixed;bottom:calc(16px + var(--safe-bottom));left:16px;right:16px;z-index:80;}
 .save-btn-main{width:100%;background:var(--accent);color:white;border:none;border-radius:14px;padding:16px;font-size:17px;font-weight:700;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;box-shadow:0 4px 20px rgba(37,99,235,0.3);}
 .save-btn-main:active{opacity:0.85;}
 </style>
 </head>
 <body>
-
 <div class="topbar">
-  <h1>⚙ ROSTER ADMIN <span style="font-size:10px;opacity:0.6;font-weight:400">v6.2</span></h1>
+  <h1>⚙ ROSTER ADMIN <span style="font-size:10px;opacity:0.6;font-weight:400">v6.3</span></h1>
   <a href="index.html" class="back-btn">← Roster</a>
 </div>
 
-<!-- LOGIN -->
 <div class="login-wrap" id="loginWrap">
   <div class="login-card">
     <h2>🔒 Accesso Admin</h2>
@@ -89,9 +71,7 @@ select.input{appearance:none;}
   </div>
 </div>
 
-<!-- ADMIN PANEL -->
 <div class="admin-wrap" id="adminWrap">
-
   <div class="section-title">Info Mese</div>
   <div class="stats-grid">
     <div class="field"><label>Mese</label><input class="input" id="fMonth" placeholder="es. Aprile 2026"></div>
@@ -111,16 +91,13 @@ select.input{appearance:none;}
 
   <div class="section-title">Giorni del mese</div>
   <div id="daysList"></div>
-
   <div style="height:80px"></div>
 </div>
 
-<!-- EDIT MODAL -->
 <div class="edit-modal" id="editModal">
   <div class="edit-sheet">
     <div class="edit-handle"></div>
     <div class="edit-title" id="editTitle">Modifica giorno</div>
-
     <div class="field">
       <label>Tipo giorno</label>
       <select class="input" id="eType" onchange="toggleFields()">
@@ -132,7 +109,6 @@ select.input{appearance:none;}
         <option value="offr">🏠 OFF (Richiesto)</option>
       </select>
     </div>
-
     <div id="flightFields">
       <div class="row2">
         <div class="field"><label>Volo N°</label><input class="input" id="eFN" placeholder="es. 573"></div>
@@ -157,11 +133,9 @@ select.input{appearance:none;}
       </div>
       <div class="field"><label>Note</label><input class="input" id="eNote" placeholder="es. Biglietti Da Acquistare"></div>
     </div>
-
     <div id="layoverFields" style="display:none">
       <div class="field"><label>Città</label><input class="input" id="eCity" placeholder="es. Zanzibar 🇹🇿"></div>
     </div>
-
     <div class="btn-row">
       <button class="btn danger" onclick="clearDay()">🗑 Cancella</button>
       <button class="btn green" onclick="saveDay()">✓ Salva</button>
@@ -170,19 +144,26 @@ select.input{appearance:none;}
   </div>
 </div>
 
-<!-- SAVE BAR -->
 <div class="save-bar" id="saveBar" style="display:none">
   <button class="save-btn-main" onclick="saveRoster()">💾 Salva Roster su Cloud</button>
 </div>
 
 <script>
-const BIN_ID = '69a8690d43b1c97be9b354e6';
+const BIN_ID     = '69a8690d43b1c97be9b354e6';
 const PDF_BIN_ID = '69a9c428d0ea881f40f272de';
+const API_KEY    = '$2a$10$zML8H2V0JzBwhx58kTx66.eL3u5VDf3XJCq3YdWHFJoZT6ikdWeeS';
+const ADMIN_PWD  = 'neos787';
+const WDS        = ['dom','lun','mar','mer','gio','ven','sab'];
+const WD_NAMES   = {lun:'Lun',mar:'Mar',mer:'Mer',gio:'Gio',ven:'Ven',sab:'Sab',dom:'Dom'};
+
 let allRosters = {};
-let allPdfs = {};
+let allPdfs    = {};
+let rosterData = { month:'', fh:'', off:'', remaining:'', updated:'', days:{} };
+let editingDay = null;
+let hasChanges = false;
+let justImported = false;
 
 function getMonthKey(monthStr) {
-  // "Mar 2026" -> "2026-03", "Feb 2026" -> "2026-02"
   const months = {gen:'01',feb:'02',mar:'03',apr:'04',mag:'05',giu:'06',
                   lug:'07',ago:'08',set:'09',ott:'10',nov:'11','dic':'12'};
   if (!monthStr) return new Date().toISOString().substring(0,7);
@@ -191,14 +172,22 @@ function getMonthKey(monthStr) {
   const y = parts[1] || new Date().getFullYear();
   return `${y}-${m}`;
 }
-const API_KEY = '$2a$10$zML8H2V0JzBwhx58kTx66.eL3u5VDf3XJCq3YdWHFJoZT6ikdWeeS';
-const ADMIN_PWD = 'neos787';
-const WDS = ['dom','lun','mar','mer','gio','ven','sab'];
-const WD_NAMES = {lun:'Lun',mar:'Mar',mer:'Mer',gio:'Gio',ven:'Ven',sab:'Sab',dom:'Dom'};
 
-let rosterData = { month:'', fh:'', off:'', remaining:'', updated:'', days:{} };
-let editingDay = null;
-let hasChanges = false;
+// ── FIX: normalizza struttura bin PDF (gestisce chiavi annidate errate) ──
+function normalizePdfRecord(rec) {
+  if (!rec || typeof rec !== 'object') return {};
+  // Struttura corretta: { "2026-03": "https://..." }
+  const directKeys = Object.keys(rec).filter(k => k.match(/^\d{4}-\d{2}$/));
+  if (directKeys.length > 0) return rec;
+  // Struttura annidata errata: { "pdfs": { "2026-03": "https://..." } }
+  for (const val of Object.values(rec)) {
+    if (val && typeof val === 'object') {
+      const nested = Object.keys(val).filter(k => k.match(/^\d{4}-\d{2}$/));
+      if (nested.length > 0) return val;
+    }
+  }
+  return {};
+}
 
 function doLogin() {
   const pwd = document.getElementById('pwdInput').value;
@@ -211,39 +200,30 @@ function doLogin() {
   }
 }
 
-let justImported = false;
-
 async function loadData() {
   if (justImported) return;
   try {
-    const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
-      headers: { 'X-Access-Key': API_KEY }
-    });
+    const res  = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, { headers:{'X-Access-Key':API_KEY} });
     const data = await res.json();
     const record = data.record || {};
-    // Detect format
     const monthKeys = Object.keys(record).filter(k => k.match(/^\d{4}-\d{2}$/)).sort();
     if (monthKeys.length > 0) {
-      // New multi-month format
       allRosters = record;
-      rosterData = allRosters[monthKeys[monthKeys.length - 1]] || {};
+      rosterData = allRosters[monthKeys[monthKeys.length-1]] || {};
     } else if (record.days) {
-      // Legacy single-month format - migrate it
       const mk = record.month ? getMonthKey(record.month) : '2026-03';
       allRosters = { [mk]: record };
       rosterData = record;
     } else {
-      allRosters = {};
-      rosterData = {};
+      allRosters = {}; rosterData = {};
     }
     populateForm();
-    // Also load PDFs
     try {
-      const pRes = await fetch(`https://api.jsonbin.io/v3/b/${PDF_BIN_ID}/latest`, {
-        headers: { 'X-Access-Key': API_KEY }
-      });
+      const pRes  = await fetch(`https://api.jsonbin.io/v3/b/${PDF_BIN_ID}/latest`, { headers:{'X-Access-Key':API_KEY} });
       const pData = await pRes.json();
-      allPdfs = pData.record || {};
+      // ── FIX: normalizza sempre ──
+      allPdfs = normalizePdfRecord(pData.record || {});
+      console.log('[Admin] allPdfs:', allPdfs);
     } catch(e) { console.log('PDF load failed', e); }
   } catch(e) {
     alert('Errore caricamento dati. Controlla la connessione.');
@@ -252,14 +232,13 @@ async function loadData() {
 
 function populateForm() {
   document.getElementById('fMonth').value = rosterData.month || '';
-  document.getElementById('fFH').value = rosterData.fh || '';
-  document.getElementById('fOff').value = rosterData.off || '';
-  document.getElementById('fRem').value = rosterData.remaining || '';
+  document.getElementById('fFH').value    = rosterData.fh    || '';
+  document.getElementById('fOff').value   = rosterData.off   || '';
+  document.getElementById('fRem').value   = rosterData.remaining || '';
   buildDaysList();
 }
 
 function getWd(d) {
-  // March 2026: 1st is Sunday
   const date = new Date(2026, 2, d);
   return WDS[date.getDay()];
 }
@@ -269,23 +248,22 @@ function buildDaysList() {
   list.innerHTML = '';
   for (let d=1;d<=31;d++) {
     const info = rosterData.days[d];
-    const row = document.createElement('div');
+    const row  = document.createElement('div');
     row.className = 'day-row';
-    let icon = '➕', desc = 'Vuoto — tocca per aggiungere';
+    let icon='➕', desc='Vuoto — tocca per aggiungere';
     if (info) {
-      if (info.type==='off') { icon='🏠'; desc='Giorno OFF'; }
-      else if (info.type==='offr') { icon='🏠'; desc='OFF su richiesta'; }
+      if (info.type==='off')          { icon='🏠'; desc='Giorno OFF'; }
+      else if (info.type==='offr')    { icon='🏠'; desc='OFF su richiesta'; }
       else if (info.type==='layover') { icon='🏨'; desc=`Layover ${info.city||''}`; }
-      else if (info.type==='dh') { icon='🚂'; desc=`DH ${info.flights?.[0]?.dep||''}→${info.flights?.[0]?.arr||''}`; }
-      else if (info.type==='flight') { icon='✈️'; desc=`${info.flights?.[0]?.dep||''}→${info.flights?.[0]?.arr||''} ${info.flights?.[0]?.etd||''}`; }
+      else if (info.type==='dh')      { icon='🚂'; desc=`DH ${info.flights?.[0]?.dep||''}→${info.flights?.[0]?.arr||''}`; }
+      else if (info.type==='flight')  { icon='✈️'; desc=`${info.flights?.[0]?.dep||''}→${info.flights?.[0]?.arr||''} ${info.flights?.[0]?.etd||''}`; }
     }
     row.innerHTML = `
       <div>
         <div class="dr-date">${d} Mar · ${WD_NAMES[getWd(d)]||''}</div>
         <div class="dr-info">${desc}</div>
       </div>
-      <div class="dr-icon">${icon}</div>
-    `;
+      <div class="dr-icon">${icon}</div>`;
     row.addEventListener('click', ()=>openEdit(d));
     list.appendChild(row);
   }
@@ -300,12 +278,12 @@ function openEdit(d) {
   document.getElementById('eCity').value = info.city || '';
   if (info.flights && info.flights[0]) {
     const f = info.flights[0];
-    document.getElementById('eFN').value = f.fn || '';
-    document.getElementById('eDep').value = f.dep || '';
-    document.getElementById('eArr').value = f.arr || '';
-    document.getElementById('eEtd').value = f.etd || '';
-    document.getElementById('eEta').value = f.eta || '';
-    document.getElementById('eFh').value = f.fh || '';
+    document.getElementById('eFN').value   = f.fn   || '';
+    document.getElementById('eDep').value  = f.dep  || '';
+    document.getElementById('eArr').value  = f.arr  || '';
+    document.getElementById('eEtd').value  = f.etd  || '';
+    document.getElementById('eEta').value  = f.eta  || '';
+    document.getElementById('eFh').value   = f.fh   || '';
     document.getElementById('eNote').value = f.note || '';
   } else {
     ['eFN','eDep','eArr','eEtd','eEta','eFh','eNote'].forEach(id=>document.getElementById(id).value='');
@@ -317,7 +295,7 @@ function openEdit(d) {
 
 function toggleFields() {
   const t = document.getElementById('eType').value;
-  document.getElementById('flightFields').style.display = (t==='flight'||t==='dh') ? 'block' : 'none';
+  document.getElementById('flightFields').style.display  = (t==='flight'||t==='dh') ? 'block' : 'none';
   document.getElementById('layoverFields').style.display = t==='layover' ? 'block' : 'none';
 }
 
@@ -330,42 +308,37 @@ function saveDay() {
     let entry = { type:t, wd };
     if (t==='flight'||t==='dh') {
       entry.ckin = document.getElementById('eCkin').value;
-      entry.htl = document.getElementById('eHtl').value === 'true';
+      entry.htl  = document.getElementById('eHtl').value === 'true';
       entry.flights = [{
-        fn: document.getElementById('eFN').value,
+        fn:  document.getElementById('eFN').value,
         dep: document.getElementById('eDep').value.toUpperCase(),
         arr: document.getElementById('eArr').value.toUpperCase(),
         etd: document.getElementById('eEtd').value,
         eta: document.getElementById('eEta').value,
-        fh: document.getElementById('eFh').value,
-        note: document.getElementById('eNote').value,
-        dh: t==='dh'
+        fh:  document.getElementById('eFh').value,
+        note:document.getElementById('eNote').value,
+        dh:  t==='dh'
       }];
     } else if (t==='layover') {
       entry.city = document.getElementById('eCity').value;
-      entry.htl = true;
+      entry.htl  = true;
     }
     rosterData.days[d] = entry;
   }
-  closeEdit();
-  buildDaysList();
-  markChanged();
+  closeEdit(); buildDaysList(); markChanged();
 }
 
-function clearDay() {
-  delete rosterData.days[editingDay];
-  closeEdit();
-  buildDaysList();
-  markChanged();
-}
+function clearDay()  { delete rosterData.days[editingDay]; closeEdit(); buildDaysList(); markChanged(); }
+function closeEdit() { document.getElementById('editModal').classList.remove('open'); }
+function markChanged(){ hasChanges=true; document.getElementById('saveBar').style.display='block'; }
 
-function closeEdit() {
-  document.getElementById('editModal').classList.remove('open');
-}
-
-function markChanged() {
-  hasChanges = true;
-  document.getElementById('saveBar').style.display = 'block';
+function loadScript(src) {
+  return new Promise((res,rej) => {
+    if (document.querySelector(`script[src="${src}"]`)) { res(); return; }
+    const s = document.createElement('script');
+    s.src = src; s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
 }
 
 async function importPDF(event) {
@@ -376,7 +349,6 @@ async function importPDF(event) {
   status.textContent = '⏳ Lettura PDF in corso...';
 
   try {
-    // Load PDF.js from CDN
     if (!window.pdfjsLib) {
       await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
       pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -385,349 +357,225 @@ async function importPDF(event) {
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     let fullText = '';
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const tc = await page.getTextContent();
+    for (let i=1; i<=pdf.numPages; i++) {
+      const page  = await pdf.getPage(i);
+      const tc    = await page.getTextContent();
       const items = tc.items.filter(it => it.str.trim());
-
-      // Helper: find value on same row (Y) to the right of a label
       const sameRowRight = (labelText) => {
-        const label = items.find(it => it.str.trim() === labelText);
+        const label = items.find(it => it.str.trim()===labelText);
         if (!label) return null;
-        const ly = label.transform[5], lx = label.transform[4];
-        const candidates = items
-          .filter(it => Math.abs(it.transform[5] - ly) < 6 && it.transform[4] > lx && it.str.trim())
-          .sort((a,b) => a.transform[4] - b.transform[4]);
+        const ly=label.transform[5], lx=label.transform[4];
+        const candidates = items.filter(it=>Math.abs(it.transform[5]-ly)<6&&it.transform[4]>lx&&it.str.trim()).sort((a,b)=>a.transform[4]-b.transform[4]);
         return candidates[0] ? candidates[0].str.trim() : null;
       };
-
-      // Extract summary values by physical position (works regardless of page order)
       const monthVal = sameRowRight('Month');
-      if (monthVal) fullText += 'SUMMARY_OFF ' + monthVal + '\n';
-      
+      if (monthVal) fullText += 'SUMMARY_OFF '+monthVal+'\n';
       const doneVal = sameRowRight('Done');
-      if (doneVal) fullText += 'SUMMARY_DONE ' + doneVal + '\n';
-      
+      if (doneVal) fullText += 'SUMMARY_DONE '+doneVal+'\n';
       const ytdVal = sameRowRight('YTD');
-      if (ytdVal) fullText += 'SUMMARY_YTD ' + ytdVal + '\n';
-
+      if (ytdVal) fullText += 'SUMMARY_YTD '+ytdVal+'\n';
       const fhItem = items.find(it => it.str.includes('Flight Hours from'));
       if (fhItem) {
-        const fhy = fhItem.transform[5], fhx = fhItem.transform[4];
-        const fhVal = items
-          .filter(it => Math.abs(it.transform[5] - fhy) < 6 && it.transform[4] > fhx && it.str.trim())
-          .sort((a,b) => a.transform[4] - b.transform[4])[0];
-        if (fhVal) fullText += 'SUMMARY_FH ' + fhVal.str.trim() + '\n';
+        const fhy=fhItem.transform[5], fhx=fhItem.transform[4];
+        const fhVal = items.filter(it=>Math.abs(it.transform[5]-fhy)<6&&it.transform[4]>fhx&&it.str.trim()).sort((a,b)=>a.transform[4]-b.transform[4])[0];
+        if (fhVal) fullText += 'SUMMARY_FH '+fhVal.str.trim()+'\n';
       }
-
-      // Normal text extraction
-      fullText += items.map(it => it.str).join(' ') + '\n';
+      fullText += items.map(it=>it.str).join(' ')+'\n';
     }
 
-    // DEBUG
     const debugEl = document.getElementById('debugText');
     if (debugEl) {
-      const last500 = fullText.substring(Math.max(0, fullText.length-500));
       debugEl.style.display='block';
-      debugEl.value='--- PRIME 500 chars ---\n' + fullText.substring(0,500) + '\n\n--- ULTIME 500 chars (riepilogo) ---\n' + last500;
+      debugEl.value='--- PRIME 500 ---\n'+fullText.substring(0,500)+'\n\n--- ULTIME 500 ---\n'+fullText.substring(Math.max(0,fullText.length-500));
     }
 
     const result = parseNeosRoster(fullText);
     if (result.daysFound === 0) {
-      status.style.color = 'var(--warn)';
-      status.textContent = '⚠️ Nessun giorno trovato — vedi testo estratto qui sotto.';
+      status.style.color='var(--warn)';
+      status.textContent='⚠️ Nessun giorno trovato — vedi testo estratto qui sotto.';
       return;
     }
 
-    // Compare with existing data and show differences
-    const oldFH = rosterData.fh || '';
-    const oldOff = rosterData.off || '';
-    const oldRem = rosterData.remaining || '';
-
-    // Merge into rosterData
+    const oldFH=rosterData.fh||'', oldOff=rosterData.off||'', oldRem=rosterData.remaining||'';
     rosterData.days = result.days;
-    if (result.month) { rosterData.month = result.month; document.getElementById('fMonth').value = result.month; }
-    if (result.fh) { rosterData.fh = result.fh; document.getElementById('fFH').value = result.fh; }
-    if (result.off) { rosterData.off = result.off; document.getElementById('fOff').value = result.off; }
-    else { console.log('WARNING: result.off is empty, text sample:', fullText.substring(fullText.indexOf('Day OFF'), fullText.indexOf('Day OFF')+60)); }
-    if (result.remaining) { rosterData.remaining = result.remaining; document.getElementById('fRem').value = result.remaining; }
-
+    if (result.month)     { rosterData.month=result.month;         document.getElementById('fMonth').value=result.month; }
+    if (result.fh)        { rosterData.fh=result.fh;               document.getElementById('fFH').value=result.fh; }
+    if (result.off)       { rosterData.off=result.off;             document.getElementById('fOff').value=result.off; }
+    if (result.remaining) { rosterData.remaining=result.remaining; document.getElementById('fRem').value=result.remaining; }
     buildDaysList();
     markChanged();
-
-    // Prevent loadData from overwriting
     justImported = true;
 
-    // Upload PDF to Cloudinary (unsigned, free, works on all devices)
+    // ── FIX CLOUDINARY: usa /image/upload invece di /raw/upload ──
+    // I PDF caricati come "image" hanno URL pubblici senza autenticazione
     try {
       const mk = getMonthKey(document.getElementById('fMonth').value);
       const formData = new FormData();
       formData.append('file', file);
       formData.append('upload_preset', 'flightroster');
       formData.append('public_id', 'roster_' + mk);
-      formData.append('resource_type', 'raw');
-      const cRes = await fetch('https://api.cloudinary.com/v1_1/dzlj6wrri/raw/upload', {
+      // NON aggiungere resource_type: il preset gestisce il tipo automaticamente
+      const cRes = await fetch('https://api.cloudinary.com/v1_1/dzlj6wrri/image/upload', {
         method: 'POST',
         body: formData
       });
       const cData = await cRes.json();
+      console.log('[Cloudinary] response:', cData);
       if (cData.secure_url) {
-        // Save URL in JSONBin PDF bin (just URLs, very small)
+        // ── FIX: salva in struttura piatta { "2026-03": "url" } ──
         allPdfs[mk] = cData.secure_url;
-        const pdfKeys = Object.keys(allPdfs).sort();
-        if (pdfKeys.length > 4) pdfKeys.slice(0, pdfKeys.length - 4).forEach(k => delete allPdfs[k]);
+        // Mantieni solo ultimi 4 mesi
+        const pdfKeys = Object.keys(allPdfs).filter(k=>k.match(/^\d{4}-\d{2}$/)).sort();
+        if (pdfKeys.length > 4) pdfKeys.slice(0, pdfKeys.length-4).forEach(k=>delete allPdfs[k]);
         await fetch(`https://api.jsonbin.io/v3/b/${PDF_BIN_ID}`, {
           method: 'PUT',
-          headers: { 'Content-Type':'application/json', 'X-Access-Key': API_KEY },
-          body: JSON.stringify(allPdfs)
+          headers: {'Content-Type':'application/json','X-Access-Key':API_KEY},
+          body: JSON.stringify(allPdfs)  // struttura piatta, nessun wrapper
         });
-        console.log('PDF uploaded to Cloudinary:', cData.secure_url);
+        console.log('[PDF bin] saved:', allPdfs);
+      } else {
+        console.warn('[Cloudinary] no secure_url:', cData.error?.message || cData);
       }
-    } catch(e) { console.log('PDF upload failed:', e); }
+    } catch(e) { console.log('[Cloudinary] upload failed:', e); }
 
-    // Auto-save immediately so cloud is updated
-    rosterData.month = document.getElementById('fMonth').value;
-    rosterData.fh = document.getElementById('fFH').value;
-    rosterData.off = document.getElementById('fOff').value;
+    // Auto-save roster
+    rosterData.month     = document.getElementById('fMonth').value;
+    rosterData.fh        = document.getElementById('fFH').value;
+    rosterData.off       = document.getElementById('fOff').value;
     rosterData.remaining = document.getElementById('fRem').value;
-    rosterData.updated = new Date().toLocaleString('it-IT');
-    // Save under month key in allRosters
+    rosterData.updated   = new Date().toLocaleString('it-IT');
     const mk = getMonthKey(rosterData.month);
     allRosters[mk] = Object.assign({}, rosterData);
-
-    // Keep only last 4 months
-    const autoKeys = Object.keys(allRosters).filter(k => k.match(/^\d{4}-\d{2}$/)).sort();
-    if (autoKeys.length > 4) {
-      autoKeys.slice(0, autoKeys.length - 4).forEach(k => { delete allRosters[k]; });
-    }
-
+    const autoKeys = Object.keys(allRosters).filter(k=>k.match(/^\d{4}-\d{2}$/)).sort();
+    if (autoKeys.length > 4) autoKeys.slice(0,autoKeys.length-4).forEach(k=>delete allRosters[k]);
     fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
-      method: 'PUT',
-      headers: { 'Content-Type':'application/json', 'X-Access-Key': API_KEY },
+      method:'PUT',
+      headers:{'Content-Type':'application/json','X-Access-Key':API_KEY},
       body: JSON.stringify(allRosters)
     });
 
-    // Build comparison message
+    // Messaggio con diff
     let diffMsg = `✅ Importati ${result.daysFound} giorni!`;
     const diffs = [];
-    if (oldFH && result.fh && oldFH !== result.fh) {
-      const toMins = s => { const [h,m] = s.replace(',',':').replace('.',':').split(':').map(Number); return h*60+(m||0); };
-      const delta = toMins(result.fh) - toMins(oldFH);
-      const sign = delta > 0 ? '+' : '';
-      const dh = Math.floor(Math.abs(delta)/60), dm = Math.abs(delta)%60;
+    if (oldFH && result.fh && oldFH!==result.fh) {
+      const toMins = s=>{const[h,m]=s.replace(',',':').replace('.',':').split(':').map(Number);return h*60+(m||0);};
+      const delta=toMins(result.fh)-toMins(oldFH), sign=delta>0?'+':'';
+      const dh=Math.floor(Math.abs(delta)/60), dm=Math.abs(delta)%60;
       diffs.push(`⏱ Ore volo: ${oldFH} → ${result.fh} <span style="color:${delta>0?'#e65100':'#1b5e20'};font-weight:700">(${sign}${dh}h${dm>0?dm+'m':''})</span>`);
     }
-    if (oldOff && result.off && oldOff !== result.off) {
-      const delta = parseInt(result.off) - parseInt(oldOff);
+    if (oldOff && result.off && oldOff!==result.off) {
+      const delta=parseInt(result.off)-parseInt(oldOff);
       diffs.push(`🏠 Giorni OFF: ${oldOff} → ${result.off} <span style="color:${delta>0?'#1b5e20':'#e65100'};font-weight:700">(${delta>0?'+':''}${delta})</span>`);
     }
-    if (oldRem && result.remaining && oldRem !== result.remaining) {
-      const delta = parseInt(result.remaining) - parseInt(oldRem);
+    if (oldRem && result.remaining && oldRem!==result.remaining) {
+      const delta=parseInt(result.remaining)-parseInt(oldRem);
       diffs.push(`📊 Remaining: ${oldRem} → ${result.remaining} <span style="color:${delta>0?'#1b5e20':'#e65100'};font-weight:700">(${delta>0?'+':''}${delta})</span>`);
     }
-    if (diffs.length > 0) {
-      diffMsg += '<br><br><b>Modifiche rilevate:</b><br>' + diffs.join('<br>');
-      status.style.color = 'var(--warn)';
-    } else {
-      status.style.color = 'var(--accent2)';
-    }
+    if (diffs.length>0) { diffMsg+='<br><br><b>Modifiche:</b><br>'+diffs.join('<br>'); status.style.color='var(--warn)'; }
+    else { status.style.color='var(--accent2)'; }
     status.innerHTML = diffMsg;
   } catch(e) {
-    status.style.color = 'var(--danger)';
-    status.textContent = '❌ Errore lettura PDF: ' + e.message;
+    status.style.color='var(--danger)';
+    status.textContent='❌ Errore: '+e.message;
   }
-  // Reset input
-  event.target.value = '';
-}
-
-function loadScript(src) {
-  return new Promise((res, rej) => {
-    const s = document.createElement('script');
-    s.src = src; s.onload = res; s.onerror = rej;
-    document.head.appendChild(s);
-  });
+  event.target.value='';
 }
 
 function parseNeosRoster(text) {
-  const WDS = ['dom','lun','mar','mer','gio','ven','sab'];
-  const DAY_ABB = {su:'dom',mo:'lun',tu:'mar',we:'mer',th:'gio',fr:'ven',sa:'sab'};
-  const MNAMES = ['','Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
-  const SKIP = new Set(['DEP','ARR','ETD','ETA','FH','DH','HTL']);
-  let fhTotal='', offCount='', remaining='', month='';
-  const days = {};
-
-  const mMatch = text.match(/From\s+(\d{2})\/(\d{2})\/(\d{4})/);
-  if (mMatch) month = MNAMES[parseInt(mMatch[2])] + ' ' + mMatch[3];
-  const fhM = text.match(/Flight Hours\b[\s\S]*?(\d{2,3}[.,]\d{2})/i) || text.match(/(\d{2,3}[.,]\d{2})\s+Holidays/i);
-  if (fhM) fhTotal = fhM[1].replace('.', ':').replace(',', ':');
-  // "Month" value for Day OFF 
-  const offM = text.match(/Day\s+OFF[\s\S]*?Month[\s\S]*?\b(\d{1,2})\b/i);
-  if (offM) offCount = offM[1];
-  // Remaining: extracted directly from same-row position as "Remaining" label
-  const remMarker = text.match(/REMAINING_VALUE\s+(-?\d+)/);
-  if (remMarker) remaining = remMarker[1];
-  const targetMonth = mMatch ? parseInt(mMatch[2], 10) : 3; // default March
-
-  // Only split at dates followed by day abbreviation (su/mo/tu/we/th/fr/sa)
-  const chunks = text.split(/(?=\b\d{2}\/\d{2}\/\d{4}\s+(?:su|mo|tu|we|th|fr|sa)\b)/);
-
-  // First pass: collect all raw chunks per day
-  const rawChunks = {};
+  const WDS=['dom','lun','mar','mer','gio','ven','sab'];
+  const DAY_ABB={su:'dom',mo:'lun',tu:'mar',we:'mer',th:'gio',fr:'ven',sa:'sab'};
+  const MNAMES=['','Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+  const SKIP=new Set(['DEP','ARR','ETD','ETA','FH','DH','HTL']);
+  let fhTotal='',offCount='',remaining='',month='';
+  const days={};
+  const mMatch=text.match(/From\s+(\d{2})\/(\d{2})\/(\d{4})/);
+  if (mMatch) month=MNAMES[parseInt(mMatch[2])]+' '+mMatch[3];
+  const fhM=text.match(/Flight Hours\b[\s\S]*?(\d{2,3}[.,]\d{2})/i)||text.match(/(\d{2,3}[.,]\d{2})\s+Holidays/i);
+  if (fhM) fhTotal=fhM[1].replace('.',':').replace(',',':');
+  const offM=text.match(/Day\s+OFF[\s\S]*?Month[\s\S]*?\b(\d{1,2})\b/i);
+  if (offM) offCount=offM[1];
+  const remMarker=text.match(/REMAINING_VALUE\s+(-?\d+)/);
+  if (remMarker) remaining=remMarker[1];
+  const targetMonth=mMatch?parseInt(mMatch[2],10):3;
+  const chunks=text.split(/(?=\b\d{2}\/\d{2}\/\d{4}\s+(?:su|mo|tu|we|th|fr|sa)\b)/);
+  const rawChunks={};
   for (const chunk of chunks) {
-    const dm = chunk.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(su|mo|tu|we|th|fr|sa)\b\s*([\s\S]*)/i);
+    const dm=chunk.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(su|mo|tu|we|th|fr|sa)\b\s*([\s\S]*)/i);
     if (!dm) continue;
-    const day = parseInt(dm[1]), mo = parseInt(dm[2]);
-    if (parseInt(mo,10) !== parseInt(targetMonth,10)) continue;
-    rawChunks[day] = { wd: DAY_ABB[dm[4]]||dm[4], rest: dm[5]||'' };
+    const day=parseInt(dm[1]),mo=parseInt(dm[2]);
+    if (parseInt(mo,10)!==parseInt(targetMonth,10)) continue;
+    rawChunks[day]={wd:DAY_ABB[dm[4]]||dm[4],rest:dm[5]||''};
   }
-
-  for (let day = 1; day <= 31; day++) {
-    const rc = rawChunks[day];
+  for (let day=1;day<=31;day++) {
+    const rc=rawChunks[day];
     if (!rc) continue;
-    const { wd, rest } = rc;
-
-    // LAYOVER
-    if (/\bLAYOVER\b/i.test(rest)) {
-      days[day] = {type:'layover', wd, htl:true, city:''}; continue;
-    }
-    // OFF(R)
-    if (/OFF\(R\)/i.test(rest)) {
-      days[day] = {type:'offr', wd}; continue;
-    }
-    // OFF
-    if (/\bOFF\b/i.test(rest) && !/[A-Z]{3}\s+[A-Z>]{3}\s+\d{2}:\d{2}/.test(rest)) {
-      days[day] = {type:'off', wd}; continue;
-    }
-
-    const ckin = (() => { const c = rest.match(/\.{3,}\s+(\d{2}:\d{2})/); return c?c[1]:''; })();
-    const htl = /\bHTL\b/.test(rest);
-
-    // Check if this day is a continuation day (starts with > ARR ETA, possibly preceded by HTL)
-    const isCont = /^[.\s]*(HTL\s+)?>\.?\s+[A-Z]{3}\s+\d{2}:\d{2}/.test(rest);
-
+    const {wd,rest}=rc;
+    if (/\bLAYOVER\b/i.test(rest)) { days[day]={type:'layover',wd,htl:true,city:''}; continue; }
+    if (/OFF\(R\)/i.test(rest))     { days[day]={type:'offr',wd}; continue; }
+    if (/\bOFF\b/i.test(rest)&&!/[A-Z]{3}\s+[A-Z>]{3}\s+\d{2}:\d{2}/.test(rest)) { days[day]={type:'off',wd}; continue; }
+    const ckin=(()=>{const c=rest.match(/\.{3,}\s+(\d{2}:\d{2})/);return c?c[1]:'';})();
+    const htl=/\bHTL\b/.test(rest);
+    const isCont=/^[.\s]*(HTL\s+)?>\.?\s+[A-Z]{3}\s+\d{2}:\d{2}/.test(rest);
     if (isCont) {
-      // Extract arrival info
-      const contM = rest.match(/^[.\s]*(?:HTL\s+)?>\.?\s+([A-Z]{3})\s+(\d{2}:\d{2})\s*(\d{2}[.,]\d{2})?/);
-      // Patch previous day's last open flight
-      const prevDay = days[day-1];
-      if (prevDay && prevDay.flights && prevDay.flights.length > 0) {
-        const lf = prevDay.flights[prevDay.flights.length-1];
-        if (lf.arr === '···' || lf.arr === '>') {
-          lf.arr = contM ? contM[1] : '?';
-          lf.eta = contM ? contM[2] : '';
-          if (contM && contM[3]) lf.fh = contM[3].replace('.', ':').replace(',', ':');
-        }
+      const contM=rest.match(/^[.\s]*(?:HTL\s+)?>\.?\s+([A-Z]{3})\s+(\d{2}:\d{2})\s*(\d{2}[.,]\d{2})?/);
+      const prevDay=days[day-1];
+      if (prevDay&&prevDay.flights&&prevDay.flights.length>0) {
+        const lf=prevDay.flights[prevDay.flights.length-1];
+        if (lf.arr==='···'||lf.arr==='>') { lf.arr=contM?contM[1]:'?'; lf.eta=contM?contM[2]:''; if(contM&&contM[3])lf.fh=contM[3].replace('.',':').replace(',',':'); }
       }
-      // This day itself: check if more flights follow the continuation
-      const afterCont = contM ? rest.substring(rest.indexOf(contM[0]) + contM[0].length) : rest;
-      const extraFlights = extractFlights(afterCont, SKIP);
-      const ckin2 = (() => { const c = afterCont.match(/\.{3,}\s+(\d{2}:\d{2})/); return c?c[1]:''; })();
-      const htl2 = /\bHTL\b/.test(afterCont);
-      if (extraFlights.length > 0) {
-        const allDH = extraFlights.every(f => f.dh);
-        days[day] = {type: allDH?'dh':'flight', wd, ckin:ckin2, htl:htl2, flights:extraFlights};
+      const afterCont=contM?rest.substring(rest.indexOf(contM[0])+contM[0].length):rest;
+      const extraFlights=extractFlights(afterCont,SKIP);
+      const ckin2=(()=>{const c=afterCont.match(/\.{3,}\s+(\d{2}:\d{2})/);return c?c[1]:'';})();
+      const htl2=/\bHTL\b/.test(afterCont);
+      if (extraFlights.length>0) {
+        const allDH=extraFlights.every(f=>f.dh);
+        days[day]={type:allDH?'dh':'flight',wd,ckin:ckin2,htl:htl2,flights:extraFlights};
       } else {
-        // Continuation-only day: arrival of previous night's flight
-        const arrIATA = contM ? contM[1] : '?';
-        const prevFl = (days[day-1]&&days[day-1].flights) ? days[day-1].flights[days[day-1].flights.length-1] : null;
-        days[day] = {type:'flight', wd, ckin:ckin2, htl:htl2, flights: prevFl ? [{
-          fn: prevFl.fn, dep: prevFl.dep, arr: arrIATA,
-          etd: prevFl.etd, eta: contM?contM[2]:'',
-          fh: (contM&&contM[3])?contM[3].replace('.', ':').replace(',', ':'):'',
-          dh: prevFl.dh, cont: true
-        }] : []};
+        const arrIATA=contM?contM[1]:'?';
+        const prevFl=(days[day-1]&&days[day-1].flights)?days[day-1].flights[days[day-1].flights.length-1]:null;
+        days[day]={type:'flight',wd,ckin:ckin2,htl:htl2,flights:prevFl?[{fn:prevFl.fn,dep:prevFl.dep,arr:arrIATA,etd:prevFl.etd,eta:contM?contM[2]:'',fh:(contM&&contM[3])?contM[3].replace('.',':').replace(',',':'):'',dh:prevFl.dh,cont:true}]:[]};
       }
       continue;
     }
-
-    // Normal day with flights
-    const flights = extractFlights(rest, SKIP);
-    if (flights.length > 0) {
-      const allDH = flights.every(f => f.dh);
-      days[day] = {type: allDH?'dh':'flight', wd, ckin, htl, flights};
-    } else if (ckin) {
-      days[day] = {type:'flight', wd, ckin, htl, flights:[]};
-    }
+    const flights=extractFlights(rest,SKIP);
+    if (flights.length>0) { const allDH=flights.every(f=>f.dh); days[day]={type:allDH?'dh':'flight',wd,ckin,htl,flights}; }
+    else if (ckin) { days[day]={type:'flight',wd,ckin,htl,flights:[]}; }
   }
-
-  return { days, daysFound: Object.keys(days).length, month, fh: fhTotal, off: offCount, remaining };
+  return {days,daysFound:Object.keys(days).length,month,fh:fhTotal,off:offCount,remaining};
 }
 
-function extractFlights(rest, SKIP) {
-  const flights = [];
-  const segRe = /(?:(NO\d+|AZ\d+|\d{3,4})\s+)?([A-Z]{3})\s+([A-Z]{3}|>)\s+(\d{2}:\d{2})\s*(\d{2}:\d{2})?\s*(\d{2}[.,]\d{2})?/g;
+function extractFlights(rest,SKIP) {
+  const flights=[];
+  const segRe=/(?:(NO\d+|AZ\d+|\d{3,4})\s+)?([A-Z]{3})\s+([A-Z]{3}|>)\s+(\d{2}:\d{2})\s*(\d{2}:\d{2})?\s*(\d{2}[.,]\d{2})?/g;
   let m;
-  while ((m = segRe.exec(rest)) !== null) {
-    const fn=m[1]||'', dep=m[2], arr=m[3], etd=m[4], eta=m[5]||'';
-    const fh=(m[6]||'').replace('.', ':').replace(',', ':');
+  while ((m=segRe.exec(rest))!==null) {
+    const fn=m[1]||'',dep=m[2],arr=m[3],etd=m[4],eta=m[5]||'',fh=(m[6]||'').replace('.',':').replace(',',':');
     if (SKIP.has(dep)||SKIP.has(arr)) continue;
-    const after = rest.substring(m.index+m[0].length, m.index+m[0].length+60);
-    const before = rest.substring(Math.max(0,m.index-10), m.index);
-    const isDH = /\bDH\b/.test(after)||/\bDH\b/.test(before);
-    flights.push({fn, dep, arr: arr==='>'?'···':arr, etd, eta, fh, dh:isDH});
-  }
-  return flights;
-}
-
-function parseFlightSegments(rest, skipFirst) {
-  const flights = [];
-  const SKIP = new Set(['DEP','ARR','ETD','ETA','FH','DH','HTL']);
-
-  const segRe = /(?:(NO\d+|AZ\d+|\d{3,4})\s+)?([A-Z]{3})\s+([A-Z]{3}|>)\s+(\d{2}:\d{2})\s*(\d{2}:\d{2})?\s*(\d{2}[.,]\d{2})?/g;
-  let m;
-  let skipped = false;
-  while ((m = segRe.exec(rest)) !== null) {
-    const fn = m[1] || '';
-    const dep = m[2], arr = m[3];
-    const etd = m[4], eta = m[5] || '', fhRaw = m[6] || '';
-    const fh = fhRaw.replace('.', ':').replace(',', ':');
-
-    if (SKIP.has(dep) || SKIP.has(arr)) continue;
-    if (skipFirst && !skipped) { skipped = true; continue; }
-
-    // DH detection: look for "DH" within 25 chars after this match
-    const after = rest.substring(m.index + m[0].length, m.index + m[0].length + 25);
-    const before = rest.substring(Math.max(0, m.index - 5), m.index);
-    const isDH = /\bDH\b/.test(after) || /\bDH\b/.test(before);
-
-    flights.push({fn, dep, arr, etd, eta, fh, dh: isDH});
+    const after=rest.substring(m.index+m[0].length,m.index+m[0].length+60);
+    const before=rest.substring(Math.max(0,m.index-10),m.index);
+    const isDH=/\bDH\b/.test(after)||/\bDH\b/.test(before);
+    flights.push({fn,dep,arr:arr==='>'?'···':arr,etd,eta,fh,dh:isDH});
   }
   return flights;
 }
 
 async function saveRoster() {
-  const btn = document.querySelector('.save-btn-main');
-  btn.textContent = '💾 Salvataggio...';
-  btn.disabled = true;
-  rosterData.month = document.getElementById('fMonth').value;
-  rosterData.fh = document.getElementById('fFH').value;
-  rosterData.off = document.getElementById('fOff').value;
+  const btn=document.querySelector('.save-btn-main');
+  btn.textContent='💾 Salvataggio...'; btn.disabled=true;
+  rosterData.month     = document.getElementById('fMonth').value;
+  rosterData.fh        = document.getElementById('fFH').value;
+  rosterData.off       = document.getElementById('fOff').value;
   rosterData.remaining = document.getElementById('fRem').value;
-  rosterData.updated = new Date().toLocaleDateString('it-IT', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  rosterData.updated   = new Date().toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
   try {
-    const mk2 = getMonthKey(rosterData.month);
-    allRosters[mk2] = Object.assign({}, rosterData);
-
-    // Keep only last 4 months - remove oldest if more than 4
-    const allKeys = Object.keys(allRosters).filter(k => k.match(/^\d{4}-\d{2}$/)).sort();
-    if (allKeys.length > 4) {
-      const toDelete = allKeys.slice(0, allKeys.length - 4);
-      toDelete.forEach(k => { delete allRosters[k]; });
-      console.log('Rimossi mesi vecchi:', toDelete);
-    }
-
-    await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
-      method: 'PUT',
-      headers: { 'Content-Type':'application/json', 'X-Access-Key': API_KEY },
-      body: JSON.stringify(allRosters)
-    });
-    btn.textContent = '✅ Salvato!';
-    hasChanges = false;
-    setTimeout(()=>{ document.getElementById('saveBar').style.display='none'; btn.textContent='💾 Salva Roster su Cloud'; btn.disabled=false; }, 2000);
-  } catch(e) {
-    btn.textContent = '❌ Errore — riprova';
-    btn.disabled = false;
-  }
+    const mk2=getMonthKey(rosterData.month);
+    allRosters[mk2]=Object.assign({},rosterData);
+    const allKeys=Object.keys(allRosters).filter(k=>k.match(/^\d{4}-\d{2}$/)).sort();
+    if (allKeys.length>4) allKeys.slice(0,allKeys.length-4).forEach(k=>delete allRosters[k]);
+    await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`,{method:'PUT',headers:{'Content-Type':'application/json','X-Access-Key':API_KEY},body:JSON.stringify(allRosters)});
+    btn.textContent='✅ Salvato!'; hasChanges=false;
+    setTimeout(()=>{document.getElementById('saveBar').style.display='none';btn.textContent='💾 Salva Roster su Cloud';btn.disabled=false;},2000);
+  } catch(e) { btn.textContent='❌ Errore — riprova'; btn.disabled=false; }
 }
 </script>
 </body>
