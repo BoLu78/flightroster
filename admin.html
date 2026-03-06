@@ -91,6 +91,15 @@ select.input{appearance:none;}
 
   <div class="section-title">Giorni del mese</div>
   <div id="daysList"></div>
+
+  <div class="section-title">Manutenzione App</div>
+  <div style="background:var(--surface);border:1px solid #fca5a5;border-radius:14px;padding:16px;margin-bottom:4px;">
+    <div style="font-size:14px;color:var(--muted);margin-bottom:4px;">⚠️ <b>Reset completo</b> — cancella cache, IndexedDB, Service Worker e ricarica l'app all'ultima versione.</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Usa questo pulsante se l'app mostra dati vecchi o si comporta in modo strano.</div>
+    <button class="btn danger" onclick="resetApp()">🔄 Reset &amp; Aggiorna App</button>
+    <div id="resetStatus" style="margin-top:10px;font-size:13px;display:none"></div>
+  </div>
+
   <div style="height:80px"></div>
 </div>
 
@@ -559,7 +568,73 @@ function extractFlights(rest,SKIP) {
   return flights;
 }
 
-async function saveRoster() {
+// ── RESET APP ──────────────────────────────────────────────────────────────
+async function resetApp() {
+  const pwd = prompt('🔒 Password per il reset:');
+  if (pwd !== ADMIN_PWD) {
+    if (pwd !== null) alert('❌ Password errata');
+    return;
+  }
+
+  const status = document.getElementById('resetStatus');
+  status.style.display = 'block';
+  status.style.color = 'var(--muted)';
+  status.textContent = '⏳ Reset in corso...';
+
+  const steps = [];
+
+  // 1. Unregistra tutti i Service Worker
+  try {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      for (const reg of regs) await reg.unregister();
+      steps.push(`✓ ${regs.length} Service Worker rimoss${regs.length===1?'o':'i'}`);
+    }
+  } catch(e) { steps.push('⚠ SW: ' + e.message); }
+
+  // 2. Svuota Cache API (cache del browser per la PWA)
+  try {
+    if ('caches' in window) {
+      const cacheNames = await caches.keys();
+      for (const name of cacheNames) await caches.delete(name);
+      steps.push(`✓ ${cacheNames.length} cache PWA cancellat${cacheNames.length===1?'a':'e'}`);
+    }
+  } catch(e) { steps.push('⚠ Cache: ' + e.message); }
+
+  // 3. Cancella IndexedDB (PDF offline)
+  try {
+    const dbs = await indexedDB.databases();
+    for (const db of dbs) {
+      indexedDB.deleteDatabase(db.name);
+    }
+    steps.push(`✓ IndexedDB cancellato (${dbs.length} DB)`);
+  } catch(e) {
+    // Fallback: cancella solo FlightRosterDB
+    try { indexedDB.deleteDatabase('FlightRosterDB'); steps.push('✓ IndexedDB cancellato'); }
+    catch(e2) { steps.push('⚠ IDB: ' + e2.message); }
+  }
+
+  // 4. Cancella localStorage
+  try {
+    localStorage.clear();
+    steps.push('✓ localStorage cancellato');
+  } catch(e) { steps.push('⚠ localStorage: ' + e.message); }
+
+  // 5. Cancella sessionStorage
+  try {
+    sessionStorage.clear();
+    steps.push('✓ sessionStorage cancellato');
+  } catch(e) {}
+
+  status.innerHTML = steps.join('<br>') + '<br><br>🔄 <b>Ricarico tra 2 secondi...</b>';
+  status.style.color = 'var(--accent2)';
+
+  // 6. Ricarica forzata bypassando cache
+  setTimeout(() => {
+    window.location.href = 'index.html?v=' + Date.now();
+  }, 2000);
+}
+
   const btn=document.querySelector('.save-btn-main');
   btn.textContent='💾 Salvataggio...'; btn.disabled=true;
   rosterData.month     = document.getElementById('fMonth').value;
