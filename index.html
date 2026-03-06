@@ -139,7 +139,7 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
 /* LOADING */
 .loading { text-align:center; padding:40px; color:var(--muted); font-size:15px; }
 
-/* ── ROSTER PDF VIEWER ── */
+/* ── ROSTER PDF CARDS ── */
 .roster-month-card {
   background:var(--surface);
   border:1px solid var(--border);
@@ -147,96 +147,64 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
   margin-bottom:12px;
   overflow:hidden;
 }
-.roster-month-header {
+.roster-card-header {
   display:flex;
   justify-content:space-between;
   align-items:center;
   padding:16px;
-  cursor:pointer;
 }
-.roster-month-header:active { opacity:0.8; }
 .roster-month-title { font-size:17px; font-weight:700; color:var(--text); }
-.roster-month-sub { font-size:12px; color:var(--muted); margin-top:2px; }
-.roster-month-badges { display:flex; gap:8px; align-items:center; }
+.roster-month-sub   { font-size:12px; color:var(--muted); margin-top:2px; }
+.roster-month-badges { display:flex; gap:6px; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
 .badge-offline { background:rgba(13,148,136,0.12); color:var(--accent2); font-size:10px; font-weight:700; padding:2px 8px; border-radius:8px; font-family:'IBM Plex Mono',monospace; }
-.badge-online { background:rgba(37,99,235,0.1); color:var(--accent); font-size:10px; font-weight:700; padding:2px 8px; border-radius:8px; font-family:'IBM Plex Mono',monospace; }
-
-.pdf-viewer-wrap {
-  display:none;
-  flex-direction:column;
-  border-top:1px solid var(--border);
-  background:#1a1a2e;
-  position:relative;
-}
-.pdf-viewer-wrap.open { display:flex; }
-
-.pdf-toolbar {
+.badge-online  { background:rgba(37,99,235,0.1);   color:var(--accent);  font-size:10px; font-weight:700; padding:2px 8px; border-radius:8px; font-family:'IBM Plex Mono',monospace; }
+.pdf-action-btn { border:1px solid var(--border); background:var(--bg); color:var(--text); border-radius:10px; padding:10px 16px; font-size:14px; font-weight:600; cursor:pointer; font-family:'IBM Plex Sans',sans-serif; }
+.pdf-action-btn:active { opacity:0.8; }
+.pdf-action-btn.primary { background:var(--accent); color:white; border-color:var(--accent); }
+.pdf-action-btn.danger  { background:#fef2f2; color:var(--danger); border-color:#fca5a5; }
+.roster-card-actions {
   display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:10px 16px;
-  background:#16213e;
   gap:8px;
+  padding:0 16px 16px;
+  flex-wrap:wrap;
 }
-.pdf-page-info { font-family:'IBM Plex Mono',monospace; font-size:12px; color:#a0aec0; }
-.pdf-btn {
-  background:#2d3748;
-  color:#e2e8f0;
+.pdf-open-btn {
+  flex:1;
+  background:var(--accent);
+  color:white;
   border:none;
-  border-radius:8px;
-  padding:6px 12px;
-  font-size:13px;
+  border-radius:10px;
+  padding:12px 16px;
+  font-size:15px;
+  font-weight:600;
   cursor:pointer;
   font-family:'IBM Plex Sans',sans-serif;
-  white-space:nowrap;
 }
-.pdf-btn:active { opacity:0.7; }
-.pdf-btn.primary { background:var(--accent); }
-.pdf-btn.danger { background:#e53e3e; }
-
-.pdf-canvas-wrap {
-  overflow:auto;
-  -webkit-overflow-scrolling:touch;
-  min-height:320px;
-  max-height:60vh;
-  display:flex;
-  justify-content:center;
-  padding:12px;
-}
-.pdf-canvas-wrap canvas {
-  max-width:100%;
-  height:auto;
-  border-radius:4px;
-  box-shadow:0 4px 20px rgba(0,0,0,0.4);
-}
-
-.pdf-loading-msg {
-  color:#a0aec0;
+.pdf-open-btn:active { opacity:0.8; }
+.pdf-open-btn.offline { background:var(--accent2); }
+.pdf-save-btn {
+  flex:1;
+  background:var(--surface2);
+  color:var(--accent);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:12px 16px;
   font-size:14px;
-  padding:40px;
-  text-align:center;
+  font-weight:600;
+  cursor:pointer;
   font-family:'IBM Plex Sans',sans-serif;
 }
-.pdf-error-msg {
-  color:#fc8181;
-  font-size:13px;
-  padding:20px 16px;
-  text-align:center;
+.pdf-save-btn:active { opacity:0.8; }
+.pdf-del-btn {
+  background:rgba(220,38,38,0.1);
+  color:var(--danger);
+  border:1px solid rgba(220,38,38,0.2);
+  border-radius:10px;
+  padding:12px 14px;
+  font-size:15px;
+  cursor:pointer;
 }
-
-.roster-actions {
-  display:flex;
-  gap:8px;
-  padding:12px 16px;
-  background:#16213e;
-  border-top:1px solid #2d3748;
-}
-
-.empty-roster {
-  text-align:center;
-  padding:48px 24px;
-  color:var(--muted);
-}
+.empty-roster { text-align:center; padding:48px 24px; color:var(--muted); }
 .empty-roster .icon { font-size:48px; margin-bottom:12px; }
 .empty-roster p { font-size:14px; line-height:1.6; }
 </style>
@@ -354,285 +322,83 @@ let currentDays = {};
 let previousDays = {};
 let changes = [];
 
-// ── PDF.js ──
-let pdfjsReady = false;
-async function ensurePdfJs() {
-  if (pdfjsReady) return;
-  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
-  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-  pdfjsReady = true;
-}
-function loadScript(src) {
-  return new Promise((res,rej) => {
-    if (document.querySelector(`script[src="${src}"]`)) { res(); return; }
-    const s = document.createElement('script');
-    s.src = src; s.onload = res; s.onerror = rej;
-    document.head.appendChild(s);
-  });
-}
+// ── PDF Roster (semplice: apri direttamente nel browser) ──
 
-// ── IndexedDB helpers (salvataggio PDF offline) ──
-function openIDB() {
-  return new Promise((res, rej) => {
-    const req = indexedDB.open(IDB_NAME, 1);
-    req.onupgradeneeded = e => e.target.result.createObjectStore(IDB_STORE);
-    req.onsuccess = e => res(e.target.result);
-    req.onerror   = e => rej(e.target.error);
-  });
-}
-async function idbGet(key) {
-  const db = await openIDB();
-  return new Promise((res,rej) => {
-    const tx = db.transaction(IDB_STORE,'readonly');
-    const req = tx.objectStore(IDB_STORE).get(key);
-    req.onsuccess = e => res(e.target.result);
-    req.onerror   = e => rej(e.target.error);
-  });
-}
-async function idbSet(key, value) {
-  const db = await openIDB();
-  return new Promise((res,rej) => {
-    const tx = db.transaction(IDB_STORE,'readwrite');
-    tx.objectStore(IDB_STORE).put(value, key);
-    tx.oncomplete = res;
-    tx.onerror    = e => rej(e.target.error);
-  });
-}
-async function idbKeys() {
-  const db = await openIDB();
-  return new Promise((res,rej) => {
-    const tx = db.transaction(IDB_STORE,'readonly');
-    const req = tx.objectStore(IDB_STORE).getAllKeys();
-    req.onsuccess = e => res(e.target.result);
-    req.onerror   = e => rej(e.target.error);
-  });
-}
-async function idbDelete(key) {
-  const db = await openIDB();
-  return new Promise((res,rej) => {
-    const tx = db.transaction(IDB_STORE,'readwrite');
-    tx.objectStore(IDB_STORE).delete(key);
-    tx.oncomplete = res;
-    tx.onerror    = e => rej(e.target.error);
-  });
-}
-
-// ── Scarica PDF e salvalo in IndexedDB ──
-async function downloadAndCachePdf(monthKey, url) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error('HTTP ' + res.status);
-  const blob = await res.blob();
-  await idbSet(monthKey, blob);
-  return blob;
-}
-
-// ── Stato per i viewer aperti ──
-const pdfState = {}; // { [monthKey]: { pdf, pageNum, numPages, rendering } }
-
-// ── Costruisce la lista dei roster PDF ──
 async function buildRosterPdfList() {
   const container = document.getElementById('rosterPdfList');
+  if (!container) return;
   container.innerHTML = '';
 
-  // Raccogli le chiavi dai due sorgenti: JSON online + IDB offline
   const onlineKeys = Object.keys(allPdfs);
   let offlineKeys = [];
   try { offlineKeys = await idbKeys(); } catch(e) {}
-
   const allKeys = [...new Set([...onlineKeys, ...offlineKeys])].sort().reverse();
 
   if (allKeys.length === 0) {
     container.innerHTML = `
-      <div class="empty-roster">
-        <div class="icon">📭</div>
-        <p>Nessun roster PDF disponibile.<br>Carica il PDF del roster dall'admin.</p>
+      <div style="text-align:center;padding:40px 20px;color:#666">
+        <div style="font-size:40px;margin-bottom:12px">📭</div>
+        <p>Nessun roster PDF disponibile.<br>Carica il PDF dall'admin.</p>
       </div>`;
     return;
   }
 
   for (const key of allKeys) {
-    const hasOffline = offlineKeys.includes(key);
     const hasOnline  = onlineKeys.includes(key);
-
-    // Label mese: cerca nei dati roster
-    const rosterLabel = allRosters[key]?.month || key;
-
+    const hasOffline = offlineKeys.includes(key);
+    const label = allRosters[key]?.month || key;
     const card = document.createElement('div');
     card.className = 'roster-month-card';
-    card.id = 'card-' + key;
-
-    const badgesHtml = [
-      hasOffline ? '<span class="badge-offline">✓ Offline</span>' : '',
-      hasOnline  ? '<span class="badge-online">☁ Online</span>'   : '',
-    ].join('');
-
     card.innerHTML = `
-      <div class="roster-month-header" onclick="togglePdfViewer('${key}')">
+      <div style="display:flex;justify-content:space-between;align-items:center">
         <div>
-          <div class="roster-month-title">📄 ${rosterLabel}</div>
-          <div class="roster-month-sub">Turni mensili Neos</div>
+          <div style="font-weight:700;font-size:16px">📄 ${label}</div>
+          <div style="font-size:13px;color:#666;margin-top:2px">Turni mensili Neos</div>
         </div>
-        <div class="roster-month-badges">
-          ${badgesHtml}
-          <span style="font-size:22px;margin-left:4px">›</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          ${hasOffline ? '<span class="badge-offline">✓ Offline</span>' : ''}
+          ${hasOnline  ? '<span class="badge-online">☁ Online</span>'  : ''}
         </div>
       </div>
-      <div class="pdf-viewer-wrap" id="viewer-${key}">
-        <div class="pdf-toolbar">
-          <button class="pdf-btn" onclick="pdfPrevPage('${key}')">‹ Prec</button>
-          <span class="pdf-page-info" id="pageinfo-${key}">— / —</span>
-          <button class="pdf-btn" onclick="pdfNextPage('${key}')">Succ ›</button>
-          <button class="pdf-btn primary" onclick="pdfZoomIn('${key}')">🔍+</button>
-          <button class="pdf-btn primary" onclick="pdfZoomOut('${key}')">🔍-</button>
-        </div>
-        <div class="pdf-canvas-wrap" id="canvaswrap-${key}">
-          <div class="pdf-loading-msg">⏳ Caricamento PDF...</div>
-        </div>
-        <div class="roster-actions">
-          ${hasOffline
-            ? `<button class="pdf-btn danger" onclick="deleteOfflinePdf('${key}')">🗑 Rimuovi offline</button>`
-            : `<button class="pdf-btn primary" onclick="savePdfOffline('${key}')">⬇ Salva offline</button>`
-          }
-          ${hasOnline ? `<button class="pdf-btn" onclick="window.open('${allPdfs[key]}','_blank')">↗ Apri in browser</button>` : ''}
-        </div>
+      <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+        ${hasOnline  ? `<button class="pdf-action-btn primary" onclick="window.open('${allPdfs[key]}','_blank')">↗ Apri PDF</button>` : ''}
+        ${hasOffline ? `<button class="pdf-action-btn" onclick="openOfflinePdf('${key}')">📂 Apri offline</button>` : ''}
+        ${hasOnline && !hasOffline ? `<button class="pdf-action-btn" onclick="savePdfOffline('${key}',this)">⬇ Salva offline</button>` : ''}
+        ${hasOffline ? `<button class="pdf-action-btn danger" onclick="deleteOfflinePdf('${key}')">🗑</button>` : ''}
       </div>
     `;
     container.appendChild(card);
   }
 }
 
-let pdfScales = {}; // zoom per mese
-
-async function togglePdfViewer(key) {
-  const wrap = document.getElementById('viewer-' + key);
-  if (!wrap) return;
-  const isOpen = wrap.classList.contains('open');
-  // Chiudi tutti
-  document.querySelectorAll('.pdf-viewer-wrap.open').forEach(w => w.classList.remove('open'));
-  if (isOpen) return; // era aperto → chiudi e basta
-  wrap.classList.add('open');
-  if (!pdfState[key]) {
-    await loadPdfForKey(key);
-  } else {
-    renderPdfPage(key);
-  }
-}
-
-async function loadPdfForKey(key) {
-  const canvasWrap = document.getElementById('canvaswrap-' + key);
-  if (!canvasWrap) return;
-  canvasWrap.innerHTML = '<div class="pdf-loading-msg">⏳ Caricamento PDF...</div>';
-
+async function openOfflinePdf(key) {
   try {
-    await ensurePdfJs();
-    let pdfData;
-
-    // 1. Prova offline (IndexedDB)
-    try {
-      const blob = await idbGet(key);
-      if (blob) {
-        pdfData = await blob.arrayBuffer();
-        console.log('[PDF] Loaded from IndexedDB:', key);
-      }
-    } catch(e) {}
-
-    // 2. Fallback online (Cloudinary via JSONBin URL)
-    if (!pdfData && allPdfs[key]) {
-      const blob = await downloadAndCachePdf(key, allPdfs[key]);
-      pdfData = await blob.arrayBuffer();
-      console.log('[PDF] Loaded from Cloudinary and cached:', key);
-      // Aggiorna i badge dopo il download
-      await buildRosterPdfList();
-      const wrap = document.getElementById('viewer-' + key);
-      if (wrap) wrap.classList.add('open');
-    }
-
-    if (!pdfData) {
-      canvasWrap.innerHTML = '<div class="pdf-error-msg">❌ PDF non disponibile. Caricalo dall\'admin.</div>';
-      return;
-    }
-
-    const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
-    pdfState[key] = { pdf, pageNum: 1, numPages: pdf.numPages };
-    if (!pdfScales[key]) pdfScales[key] = 1.2;
-    renderPdfPage(key);
-  } catch(e) {
-    console.error('[PDF] Error:', e);
-    canvasWrap.innerHTML = `<div class="pdf-error-msg">❌ Errore: ${e.message}</div>`;
-  }
+    const blob = await idbGet(key);
+    if (!blob) { alert('PDF offline non trovato'); return; }
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+  } catch(e) { alert('Errore: ' + e.message); }
 }
 
-async function renderPdfPage(key) {
-  const state = pdfState[key];
-  if (!state || state.rendering) return;
-  state.rendering = true;
-
-  const canvasWrap = document.getElementById('canvaswrap-' + key);
-  const pageInfo   = document.getElementById('pageinfo-' + key);
-  if (!canvasWrap) return;
-
-  try {
-    const page     = await state.pdf.getPage(state.pageNum);
-    const scale    = pdfScales[key] || 1.2;
-    const viewport = page.getViewport({ scale });
-
-    let canvas = canvasWrap.querySelector('canvas');
-    if (!canvas) {
-      canvas = document.createElement('canvas');
-      canvasWrap.innerHTML = '';
-      canvasWrap.appendChild(canvas);
-    }
-    const ctx = canvas.getContext('2d');
-    canvas.height = viewport.height;
-    canvas.width  = viewport.width;
-
-    await page.render({ canvasContext: ctx, viewport }).promise;
-    if (pageInfo) pageInfo.textContent = `${state.pageNum} / ${state.numPages}`;
-  } catch(e) {
-    console.error('[PDF] Render error:', e);
-  }
-  state.rendering = false;
-}
-
-function pdfPrevPage(key) {
-  const s = pdfState[key];
-  if (!s || s.pageNum <= 1) return;
-  s.pageNum--;
-  renderPdfPage(key);
-}
-function pdfNextPage(key) {
-  const s = pdfState[key];
-  if (!s || s.pageNum >= s.numPages) return;
-  s.pageNum++;
-  renderPdfPage(key);
-}
-function pdfZoomIn(key) {
-  pdfScales[key] = (pdfScales[key] || 1.2) + 0.3;
-  if (pdfState[key]) { pdfState[key].rendering = false; renderPdfPage(key); }
-}
-function pdfZoomOut(key) {
-  pdfScales[key] = Math.max(0.5, (pdfScales[key] || 1.2) - 0.3);
-  if (pdfState[key]) { pdfState[key].rendering = false; renderPdfPage(key); }
-}
-
-async function savePdfOffline(key) {
+async function savePdfOffline(key, btn) {
   const url = allPdfs[key];
-  if (!url) return alert('URL non disponibile online.');
+  if (!url) return;
+  if (btn) { btn.textContent = '⏳...'; btn.disabled = true; }
   try {
-    await downloadAndCachePdf(key, url);
-    alert('✅ PDF salvato per uso offline!');
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const blob = await res.blob();
+    await idbSet(key, blob);
     await buildRosterPdfList();
-    const wrap = document.getElementById('viewer-' + key);
-    if (wrap) wrap.classList.add('open');
   } catch(e) {
-    alert('❌ Errore download: ' + e.message);
+    if (btn) { btn.textContent = '⬇ Salva offline'; btn.disabled = false; }
+    alert('Download non riuscito. Il PDF è disponibile solo online.');
   }
 }
 
 async function deleteOfflinePdf(key) {
   if (!confirm('Rimuovere il PDF offline per ' + key + '?')) return;
   await idbDelete(key);
-  delete pdfState[key];
   await buildRosterPdfList();
 }
 
