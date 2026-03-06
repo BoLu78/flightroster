@@ -44,12 +44,9 @@
 }
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans-serif; min-height:100vh; padding-bottom:calc(80px + var(--safe-bottom)); }
-
 /* TOPBAR */
 .topbar { background:var(--surface); border-bottom:1px solid var(--border); padding:calc(14px + var(--safe-top)) 18px 14px; position:sticky; top:0; z-index:50; display:flex; justify-content:space-between; align-items:center; }
 .topbar h1 { font-family:'IBM Plex Mono',monospace; font-size:14px; letter-spacing:0.08em; color:var(--accent); font-weight:700; }
-.topbar .month { font-size:13px; color:var(--muted); font-family:'IBM Plex Mono',monospace; }
-
 /* STATS */
 .stats-row { display:flex; gap:8px; padding:14px 16px; overflow-x:auto; scrollbar-width:none; }
 .stats-row::-webkit-scrollbar { display:none; }
@@ -58,14 +55,12 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
 .stat .sv.green { color:var(--accent2); }
 .stat .sv.orange { color:var(--warn); }
 .stat .sk { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em; }
-
 /* SYNC BAR */
 .sync-bar { margin:0 16px 14px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:10px 16px; display:flex; justify-content:space-between; align-items:center; }
 .sync-info { font-size:12px; color:var(--muted); }
 .sync-info span { color:var(--accent); font-weight:600; }
 .sync-btn { background:var(--accent); color:white; border:none; border-radius:8px; padding:7px 14px; font-size:13px; font-weight:600; cursor:pointer; font-family:'IBM Plex Sans',sans-serif; }
 .sync-btn:active { opacity:0.8; }
-
 /* CALENDAR */
 .cal-header-row { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; margin:0 16px 3px; }
 .cal-header-row div { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted); text-align:center; padding:4px 0; }
@@ -86,7 +81,6 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
 .cday-icon { position:absolute; bottom:4px; right:4px; font-size:11px; }
 .cday.is-overnight-start { border-right:2px solid var(--accent) !important; background:linear-gradient(to right, var(--flight), #dbeafe) !important; }
 .cday.is-overnight-end { border-left:2px solid var(--accent) !important; background:linear-gradient(to left, var(--flight), #dbeafe) !important; }
-
 /* LIST */
 .view { display:none; padding:0 16px; }
 .view.active { display:block; }
@@ -109,14 +103,12 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
 .di-route .arr { color:var(--accent); }
 .di-times { font-size:13px; color:var(--muted); font-family:'IBM Plex Mono',monospace; }
 .di-htl { font-size:13px; color:var(--warn); margin-top:4px; }
-
 /* CHANGES VIEW */
 .change-item { background:var(--surface); border:1px solid #fbbf24; border-radius:14px; padding:16px; margin-bottom:10px; border-left:3px solid #f59e0b; }
 .change-date { font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--muted); margin-bottom:6px; }
 .change-old { font-size:14px; color:var(--danger); text-decoration:line-through; margin-bottom:4px; }
 .change-new { font-size:14px; color:var(--off-text); font-weight:600; }
 .no-changes { text-align:center; padding:40px 20px; color:var(--muted); font-size:15px; }
-
 /* DOCS */
 .doc-item { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; }
 .doc-item.urgent { border-color:#fca5a5; background:#fef2f2; }
@@ -125,7 +117,6 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
 .doc-name { font-size:16px; font-weight:600; margin-bottom:4px; }
 .doc-exp { font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--muted); }
 .doc-icon { font-size:26px; }
-
 /* MODAL */
 .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:100; align-items:flex-end; justify-content:center; }
 .modal-overlay.open { display:flex; }
@@ -140,28 +131,120 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
 .modal-row .v { font-family:'IBM Plex Mono',monospace; font-weight:700; text-align:right; }
 .modal-row .v.blue { color:var(--accent); }
 .modal-row .v.green { color:var(--accent2); }
-
 /* BOTTOM NAV */
 .bottom-nav { position:fixed; bottom:0; left:0; right:0; background:var(--surface); border-top:1px solid var(--border); display:flex; padding:10px 0 calc(10px + var(--safe-bottom)); z-index:50; }
 .nav-btn { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; background:none; border:none; color:var(--muted); cursor:pointer; padding:4px 0; font-size:10px; font-family:'IBM Plex Sans',sans-serif; transition:color 0.15s; }
 .nav-btn.active { color:var(--accent); }
 .nav-btn .icon { font-size:20px; }
-
 /* LOADING */
 .loading { text-align:center; padding:40px; color:var(--muted); font-size:15px; }
 
-/* ROSTER PDF LIST */
-.roster-pdf-item { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; text-decoration:none; }
-.roster-pdf-item:active { opacity:0.7; }
-.roster-pdf-month { font-size:17px; font-weight:700; color:var(--text); }
-.roster-pdf-sub { font-size:12px; color:var(--muted); margin-top:3px; }
-.roster-pdf-icon { font-size:28px; }
+/* ── ROSTER PDF VIEWER ── */
+.roster-month-card {
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:16px;
+  margin-bottom:12px;
+  overflow:hidden;
+}
+.roster-month-header {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:16px;
+  cursor:pointer;
+}
+.roster-month-header:active { opacity:0.8; }
+.roster-month-title { font-size:17px; font-weight:700; color:var(--text); }
+.roster-month-sub { font-size:12px; color:var(--muted); margin-top:2px; }
+.roster-month-badges { display:flex; gap:8px; align-items:center; }
+.badge-offline { background:rgba(13,148,136,0.12); color:var(--accent2); font-size:10px; font-weight:700; padding:2px 8px; border-radius:8px; font-family:'IBM Plex Mono',monospace; }
+.badge-online { background:rgba(37,99,235,0.1); color:var(--accent); font-size:10px; font-weight:700; padding:2px 8px; border-radius:8px; font-family:'IBM Plex Mono',monospace; }
+
+.pdf-viewer-wrap {
+  display:none;
+  flex-direction:column;
+  border-top:1px solid var(--border);
+  background:#1a1a2e;
+  position:relative;
+}
+.pdf-viewer-wrap.open { display:flex; }
+
+.pdf-toolbar {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:10px 16px;
+  background:#16213e;
+  gap:8px;
+}
+.pdf-page-info { font-family:'IBM Plex Mono',monospace; font-size:12px; color:#a0aec0; }
+.pdf-btn {
+  background:#2d3748;
+  color:#e2e8f0;
+  border:none;
+  border-radius:8px;
+  padding:6px 12px;
+  font-size:13px;
+  cursor:pointer;
+  font-family:'IBM Plex Sans',sans-serif;
+  white-space:nowrap;
+}
+.pdf-btn:active { opacity:0.7; }
+.pdf-btn.primary { background:var(--accent); }
+.pdf-btn.danger { background:#e53e3e; }
+
+.pdf-canvas-wrap {
+  overflow:auto;
+  -webkit-overflow-scrolling:touch;
+  min-height:320px;
+  max-height:60vh;
+  display:flex;
+  justify-content:center;
+  padding:12px;
+}
+.pdf-canvas-wrap canvas {
+  max-width:100%;
+  height:auto;
+  border-radius:4px;
+  box-shadow:0 4px 20px rgba(0,0,0,0.4);
+}
+
+.pdf-loading-msg {
+  color:#a0aec0;
+  font-size:14px;
+  padding:40px;
+  text-align:center;
+  font-family:'IBM Plex Sans',sans-serif;
+}
+.pdf-error-msg {
+  color:#fc8181;
+  font-size:13px;
+  padding:20px 16px;
+  text-align:center;
+}
+
+.roster-actions {
+  display:flex;
+  gap:8px;
+  padding:12px 16px;
+  background:#16213e;
+  border-top:1px solid #2d3748;
+}
+
+.empty-roster {
+  text-align:center;
+  padding:48px 24px;
+  color:var(--muted);
+}
+.empty-roster .icon { font-size:48px; margin-bottom:12px; }
+.empty-roster p { font-size:14px; line-height:1.6; }
 </style>
 </head>
 <body>
 
 <div class="topbar">
-  <h1>✈ FLIGHTROSTER <span style="font-size:10px;opacity:0.5;font-weight:400">v2.6</span></h1>
+  <h1>✈ FLIGHTROSTER <span style="font-size:10px;opacity:0.5;font-weight:400">v2.7</span></h1>
   <div style="display:flex;align-items:center;gap:6px">
     <button onclick="prevMonth()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:14px;cursor:pointer;color:var(--muted)">‹</button>
     <select id="monthSelect" onchange="switchMonth(this.value)" style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);border:1px solid var(--border);border-radius:6px;padding:3px 6px;background:var(--surface);cursor:pointer">
@@ -202,6 +285,14 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
   <div id="changesList"><div class="no-changes">Nessuna modifica rilevata</div></div>
 </div>
 
+<!-- ROSTER PDF VIEW -->
+<div class="view" id="view-rosters">
+  <div style="padding:8px 0 12px">
+    <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px">📄 PDF Roster per mese</div>
+    <div id="rosterPdfList"><div class="loading">Caricamento...</div></div>
+  </div>
+</div>
+
 <!-- DOCS VIEW -->
 <div class="view" id="view-docs">
   <div class="doc-item urgent">
@@ -226,22 +317,6 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
   </div>
 </div>
 
-<!-- ROSTERS VIEW -->
-<div class="view" id="view-rosters">
-  <div style="padding:16px 0 8px">
-    <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px">PDF Roster per mese</div>
-    <div id="rosterPdfList"><div class="loading">Caricamento...</div></div>
-  </div>
-  <div style="margin-top:16px;padding:14px;background:var(--surface2);border-radius:12px;border:1px solid var(--border)">
-    <div style="font-size:12px;color:var(--muted);margin-bottom:8px">📁 Come aggiungere un roster PDF:</div>
-    <div style="font-size:12px;color:var(--text);line-height:1.6">
-      1. Rinomina il PDF come <b>2026-03.pdf</b><br>
-      2. Caricalo su GitHub nella cartella <b>/rosters/</b><br>
-      3. Torna qui e aggiorna
-    </div>
-  </div>
-</div>
-
 <!-- MODAL -->
 <div class="modal-overlay" id="modal" onclick="handleOverlay(event)">
   <div class="modal">
@@ -262,23 +337,307 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
 </div>
 
 <script>
-// Unregister old service workers to prevent stale cache
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
-}
+// ── Variabili globali ──
+const BIN_ID     = '69a8690d43b1c97be9b354e6';
+const PDF_BIN_ID = '69a9c428d0ea881f40f272de';
+const API_KEY    = '$2a$10$zML8H2V0JzBwhx58kTx66.eL3u5VDf3XJCq3YdWHFJoZT6ikdWeeS';
+const API_URL    = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+const PDF_API_URL= `https://api.jsonbin.io/v3/b/${PDF_BIN_ID}`;
+const IDB_NAME   = 'FlightRosterDB';
+const IDB_STORE  = 'pdfs';
+const TODAY = 5;
 
-const BIN_ID = '69a8690d43b1c97be9b354e6';
-let currentMonthKey = null; // e.g. "2026-03"
-let allRosters = {};        // all months data
-const API_KEY = '$2a$10$zML8H2V0JzBwhx58kTx66.eL3u5VDf3XJCq3YdWHFJoZT6ikdWeeS';
-const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
-const TODAY = 5; // March 5 2026
-
-const wdFull = {lun:'Lunedì',mar:'Martedì',mer:'Mercoledì',gio:'Giovedì',ven:'Venerdì',sab:'Sabato',dom:'Domenica'};
-
+let currentMonthKey = null;
+let allRosters = {};
+let allPdfs = {};      // { "2026-03": "https://cloudinary_url..." }
 let currentDays = {};
 let previousDays = {};
 let changes = [];
+
+// ── PDF.js ──
+let pdfjsReady = false;
+async function ensurePdfJs() {
+  if (pdfjsReady) return;
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  pdfjsReady = true;
+}
+function loadScript(src) {
+  return new Promise((res,rej) => {
+    if (document.querySelector(`script[src="${src}"]`)) { res(); return; }
+    const s = document.createElement('script');
+    s.src = src; s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+}
+
+// ── IndexedDB helpers (salvataggio PDF offline) ──
+function openIDB() {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore(IDB_STORE);
+    req.onsuccess = e => res(e.target.result);
+    req.onerror   = e => rej(e.target.error);
+  });
+}
+async function idbGet(key) {
+  const db = await openIDB();
+  return new Promise((res,rej) => {
+    const tx = db.transaction(IDB_STORE,'readonly');
+    const req = tx.objectStore(IDB_STORE).get(key);
+    req.onsuccess = e => res(e.target.result);
+    req.onerror   = e => rej(e.target.error);
+  });
+}
+async function idbSet(key, value) {
+  const db = await openIDB();
+  return new Promise((res,rej) => {
+    const tx = db.transaction(IDB_STORE,'readwrite');
+    tx.objectStore(IDB_STORE).put(value, key);
+    tx.oncomplete = res;
+    tx.onerror    = e => rej(e.target.error);
+  });
+}
+async function idbKeys() {
+  const db = await openIDB();
+  return new Promise((res,rej) => {
+    const tx = db.transaction(IDB_STORE,'readonly');
+    const req = tx.objectStore(IDB_STORE).getAllKeys();
+    req.onsuccess = e => res(e.target.result);
+    req.onerror   = e => rej(e.target.error);
+  });
+}
+async function idbDelete(key) {
+  const db = await openIDB();
+  return new Promise((res,rej) => {
+    const tx = db.transaction(IDB_STORE,'readwrite');
+    tx.objectStore(IDB_STORE).delete(key);
+    tx.oncomplete = res;
+    tx.onerror    = e => rej(e.target.error);
+  });
+}
+
+// ── Scarica PDF e salvalo in IndexedDB ──
+async function downloadAndCachePdf(monthKey, url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const blob = await res.blob();
+  await idbSet(monthKey, blob);
+  return blob;
+}
+
+// ── Stato per i viewer aperti ──
+const pdfState = {}; // { [monthKey]: { pdf, pageNum, numPages, rendering } }
+
+// ── Costruisce la lista dei roster PDF ──
+async function buildRosterPdfList() {
+  const container = document.getElementById('rosterPdfList');
+  container.innerHTML = '';
+
+  // Raccogli le chiavi dai due sorgenti: JSON online + IDB offline
+  const onlineKeys = Object.keys(allPdfs);
+  let offlineKeys = [];
+  try { offlineKeys = await idbKeys(); } catch(e) {}
+
+  const allKeys = [...new Set([...onlineKeys, ...offlineKeys])].sort().reverse();
+
+  if (allKeys.length === 0) {
+    container.innerHTML = `
+      <div class="empty-roster">
+        <div class="icon">📭</div>
+        <p>Nessun roster PDF disponibile.<br>Carica il PDF del roster dall'admin.</p>
+      </div>`;
+    return;
+  }
+
+  for (const key of allKeys) {
+    const hasOffline = offlineKeys.includes(key);
+    const hasOnline  = onlineKeys.includes(key);
+
+    // Label mese: cerca nei dati roster
+    const rosterLabel = allRosters[key]?.month || key;
+
+    const card = document.createElement('div');
+    card.className = 'roster-month-card';
+    card.id = 'card-' + key;
+
+    const badgesHtml = [
+      hasOffline ? '<span class="badge-offline">✓ Offline</span>' : '',
+      hasOnline  ? '<span class="badge-online">☁ Online</span>'   : '',
+    ].join('');
+
+    card.innerHTML = `
+      <div class="roster-month-header" onclick="togglePdfViewer('${key}')">
+        <div>
+          <div class="roster-month-title">📄 ${rosterLabel}</div>
+          <div class="roster-month-sub">Turni mensili Neos</div>
+        </div>
+        <div class="roster-month-badges">
+          ${badgesHtml}
+          <span style="font-size:22px;margin-left:4px">›</span>
+        </div>
+      </div>
+      <div class="pdf-viewer-wrap" id="viewer-${key}">
+        <div class="pdf-toolbar">
+          <button class="pdf-btn" onclick="pdfPrevPage('${key}')">‹ Prec</button>
+          <span class="pdf-page-info" id="pageinfo-${key}">— / —</span>
+          <button class="pdf-btn" onclick="pdfNextPage('${key}')">Succ ›</button>
+          <button class="pdf-btn primary" onclick="pdfZoomIn('${key}')">🔍+</button>
+          <button class="pdf-btn primary" onclick="pdfZoomOut('${key}')">🔍-</button>
+        </div>
+        <div class="pdf-canvas-wrap" id="canvaswrap-${key}">
+          <div class="pdf-loading-msg">⏳ Caricamento PDF...</div>
+        </div>
+        <div class="roster-actions">
+          ${hasOffline
+            ? `<button class="pdf-btn danger" onclick="deleteOfflinePdf('${key}')">🗑 Rimuovi offline</button>`
+            : `<button class="pdf-btn primary" onclick="savePdfOffline('${key}')">⬇ Salva offline</button>`
+          }
+          ${hasOnline ? `<button class="pdf-btn" onclick="window.open('${allPdfs[key]}','_blank')">↗ Apri in browser</button>` : ''}
+        </div>
+      </div>
+    `;
+    container.appendChild(card);
+  }
+}
+
+let pdfScales = {}; // zoom per mese
+
+async function togglePdfViewer(key) {
+  const wrap = document.getElementById('viewer-' + key);
+  if (!wrap) return;
+  const isOpen = wrap.classList.contains('open');
+  // Chiudi tutti
+  document.querySelectorAll('.pdf-viewer-wrap.open').forEach(w => w.classList.remove('open'));
+  if (isOpen) return; // era aperto → chiudi e basta
+  wrap.classList.add('open');
+  if (!pdfState[key]) {
+    await loadPdfForKey(key);
+  } else {
+    renderPdfPage(key);
+  }
+}
+
+async function loadPdfForKey(key) {
+  const canvasWrap = document.getElementById('canvaswrap-' + key);
+  if (!canvasWrap) return;
+  canvasWrap.innerHTML = '<div class="pdf-loading-msg">⏳ Caricamento PDF...</div>';
+
+  try {
+    await ensurePdfJs();
+    let pdfData;
+
+    // 1. Prova offline (IndexedDB)
+    try {
+      const blob = await idbGet(key);
+      if (blob) {
+        pdfData = await blob.arrayBuffer();
+        console.log('[PDF] Loaded from IndexedDB:', key);
+      }
+    } catch(e) {}
+
+    // 2. Fallback online (Cloudinary via JSONBin URL)
+    if (!pdfData && allPdfs[key]) {
+      const blob = await downloadAndCachePdf(key, allPdfs[key]);
+      pdfData = await blob.arrayBuffer();
+      console.log('[PDF] Loaded from Cloudinary and cached:', key);
+      // Aggiorna i badge dopo il download
+      await buildRosterPdfList();
+      const wrap = document.getElementById('viewer-' + key);
+      if (wrap) wrap.classList.add('open');
+    }
+
+    if (!pdfData) {
+      canvasWrap.innerHTML = '<div class="pdf-error-msg">❌ PDF non disponibile. Caricalo dall\'admin.</div>';
+      return;
+    }
+
+    const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
+    pdfState[key] = { pdf, pageNum: 1, numPages: pdf.numPages };
+    if (!pdfScales[key]) pdfScales[key] = 1.2;
+    renderPdfPage(key);
+  } catch(e) {
+    console.error('[PDF] Error:', e);
+    canvasWrap.innerHTML = `<div class="pdf-error-msg">❌ Errore: ${e.message}</div>`;
+  }
+}
+
+async function renderPdfPage(key) {
+  const state = pdfState[key];
+  if (!state || state.rendering) return;
+  state.rendering = true;
+
+  const canvasWrap = document.getElementById('canvaswrap-' + key);
+  const pageInfo   = document.getElementById('pageinfo-' + key);
+  if (!canvasWrap) return;
+
+  try {
+    const page     = await state.pdf.getPage(state.pageNum);
+    const scale    = pdfScales[key] || 1.2;
+    const viewport = page.getViewport({ scale });
+
+    let canvas = canvasWrap.querySelector('canvas');
+    if (!canvas) {
+      canvas = document.createElement('canvas');
+      canvasWrap.innerHTML = '';
+      canvasWrap.appendChild(canvas);
+    }
+    const ctx = canvas.getContext('2d');
+    canvas.height = viewport.height;
+    canvas.width  = viewport.width;
+
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    if (pageInfo) pageInfo.textContent = `${state.pageNum} / ${state.numPages}`;
+  } catch(e) {
+    console.error('[PDF] Render error:', e);
+  }
+  state.rendering = false;
+}
+
+function pdfPrevPage(key) {
+  const s = pdfState[key];
+  if (!s || s.pageNum <= 1) return;
+  s.pageNum--;
+  renderPdfPage(key);
+}
+function pdfNextPage(key) {
+  const s = pdfState[key];
+  if (!s || s.pageNum >= s.numPages) return;
+  s.pageNum++;
+  renderPdfPage(key);
+}
+function pdfZoomIn(key) {
+  pdfScales[key] = (pdfScales[key] || 1.2) + 0.3;
+  if (pdfState[key]) { pdfState[key].rendering = false; renderPdfPage(key); }
+}
+function pdfZoomOut(key) {
+  pdfScales[key] = Math.max(0.5, (pdfScales[key] || 1.2) - 0.3);
+  if (pdfState[key]) { pdfState[key].rendering = false; renderPdfPage(key); }
+}
+
+async function savePdfOffline(key) {
+  const url = allPdfs[key];
+  if (!url) return alert('URL non disponibile online.');
+  try {
+    await downloadAndCachePdf(key, url);
+    alert('✅ PDF salvato per uso offline!');
+    await buildRosterPdfList();
+    const wrap = document.getElementById('viewer-' + key);
+    if (wrap) wrap.classList.add('open');
+  } catch(e) {
+    alert('❌ Errore download: ' + e.message);
+  }
+}
+
+async function deleteOfflinePdf(key) {
+  if (!confirm('Rimuovere il PDF offline per ' + key + '?')) return;
+  await idbDelete(key);
+  delete pdfState[key];
+  await buildRosterPdfList();
+}
+
+// ── Resto del codice (invariato) ──
+const wdFull = {lun:'Lunedì',mar:'Martedì',mer:'Mercoledì',gio:'Giovedì',ven:'Venerdì',sab:'Sabato',dom:'Domenica'};
 
 function typeClass(t) {
   if (t==='off') return 'is-off';
@@ -288,25 +647,20 @@ function typeClass(t) {
   if (t==='ufficio') return 'is-ufficio';
   return 'is-flight';
 }
-
 function dayIcon(info) {
   if (!info) return '';
-  if (info.type==='off') return '🏠';
-  if (info.type==='offr') return '🏠';
+  if (info.type==='off'||info.type==='offr') return '🏠';
   if (info.type==='dh') return '🚂';
   if (info.type==='ufficio') return '📋';
   if (info.htl) return '🟡';
   return '';
 }
 
-function buildCalendar(days, changedDays, roster) {
+function buildCalendar(days, changedDays) {
   const grid = document.getElementById('calGrid');
   grid.innerHTML = '';
-  // March 2026 starts on Sunday = offset 6
   for (let i=0;i<6;i++) {
-    const e=document.createElement('div');
-    e.className='cday empty';
-    grid.appendChild(e);
+    const e=document.createElement('div'); e.className='cday empty'; grid.appendChild(e);
   }
   for (let d=1;d<=31;d++) {
     const info = days[d];
@@ -315,42 +669,27 @@ function buildCalendar(days, changedDays, roster) {
     if (info) cls += ' ' + typeClass(info.type);
     if (d===TODAY) cls += ' is-today';
     if (changedDays && changedDays.includes(d)) cls += ' is-changed';
-    cell.className = cls;
-
-    // Overnight detection
     const hasOpenEnd = info && info.flights && info.flights.some(f => f.arr==='···');
     const isCont = info && info.flights && info.flights.some(f => f.cont);
     if (hasOpenEnd) cls += ' is-overnight-start';
     if (isCont) cls += ' is-overnight-end';
     cell.className = cls;
-
     let route = '';
     if (info && info.flights && info.flights[0]) {
       const f = info.flights[0];
-      if (hasOpenEnd) {
-        // Show only DEP, arrival is next day
-        route = `<div class="cday-route">${f.dep||''}<br><span style="color:var(--accent);font-size:8px">▸${d+1}</span></div>`;
-      } else if (isCont) {
-        // Show only ARR, departure was previous day
-        route = `<div class="cday-route"><span style="color:var(--accent);font-size:8px">${d-1}▸</span><br>${f.arr||''}</div>`;
-      } else {
-        route = `<div class="cday-route">${f.dep||''}<br>${f.arr||''}</div>`;
-      }
-    } else if (info && (info.type==='off'||info.type==='offr')) {
-      route = ''; // solo icona
+      if (hasOpenEnd) route = `<div class="cday-route">${f.dep||''}<br><span style="color:var(--accent);font-size:8px">▸${d+1}</span></div>`;
+      else if (isCont) route = `<div class="cday-route"><span style="color:var(--accent);font-size:8px">${d-1}▸</span><br>${f.arr||''}</div>`;
+      else route = `<div class="cday-route">${f.dep||''}<br>${f.arr||''}</div>`;
     } else if (info && info.type==='layover') {
       route = `<div class="cday-route" style="font-size:9px;color:#1565c0">${info.city||'LAY'}</div>`;
-    } else if (info && (info.type==='dh'||info.type==='ufficio')) {
-      route = ''; // solo icona
     }
-
     cell.innerHTML = `<div class="cday-num">${d}</div>${route}<div class="cday-icon">${info ? dayIcon(info) : ''}</div>`;
     if (info) cell.addEventListener('click', ()=>openModal(d, info));
     grid.appendChild(cell);
   }
 }
 
-function buildList(days, changedDays, roster) {
+function buildList(days, changedDays) {
   const list = document.getElementById('listItems');
   list.innerHTML = '';
   for (let d=1;d<=31;d++) {
@@ -359,13 +698,11 @@ function buildList(days, changedDays, roster) {
     const item = document.createElement('div');
     const isChanged = changedDays && changedDays.includes(d);
     item.className = `day-item ${typeClass(info.type)}${isChanged?' is-changed':''}`;
-
     let badgeClass='badge-flight', badgeText='VOLO';
     if (info.type==='dh'){badgeClass='badge-dh';badgeText='🚂 DH';}
     else if (info.type==='off'){badgeClass='badge-off';badgeText='OFF';}
     else if (info.type==='offr'){badgeClass='badge-off';badgeText='OFF(R)';}
     else if (info.type==='layover'){badgeClass='badge-layover';badgeText='LAYOVER';}
-
     let routeHtml = '';
     if (info.flights && info.flights[0]) {
       const f = info.flights[0];
@@ -375,7 +712,6 @@ function buildList(days, changedDays, roster) {
     } else if (info.city) {
       routeHtml = `<div class="di-route" style="font-size:16px">${info.city}</div>`;
     }
-
     item.innerHTML = `
       <div class="di-top">
         <div class="di-date">${d} Mar · ${(info.wd||'').toUpperCase()}</div>
@@ -390,45 +726,35 @@ function buildList(days, changedDays, roster) {
   }
 }
 
-function buildChanges(changes) {
+function buildChanges(ch) {
   const el = document.getElementById('changesList');
-  // Update badge
   const btn = document.getElementById('btn-changes');
-  if (changes.length > 0) {
-    btn.innerHTML = `<span class="icon">🔄</span>Modifiche <span style="background:#ef4444;color:white;border-radius:10px;padding:1px 6px;font-size:10px">${changes.length}</span>`;
+  if (ch.length > 0) {
+    btn.innerHTML = `<span class="icon">🔄</span>Modifiche <span style="background:#ef4444;color:white;border-radius:10px;padding:1px 6px;font-size:10px">${ch.length}</span>`;
   }
-  if (!changes || changes.length===0) {
-    el.innerHTML = '<div class="no-changes">✅ Nessuna modifica rilevata</div>';
-    return;
+  if (!ch || ch.length===0) {
+    el.innerHTML = '<div class="no-changes">✅ Nessuna modifica rilevata</div>'; return;
   }
   el.innerHTML = '';
-  changes.forEach(c => {
+  ch.forEach(c => {
     const item = document.createElement('div');
     item.className = 'change-item';
-    item.innerHTML = `
-      <div class="change-date">📅 ${c.day} Marzo — ${c.wd||''}</div>
-      <div class="change-old">Prima: ${c.old}</div>
-      <div class="change-new">Ora: ${c.new}</div>
-    `;
+    item.innerHTML = `<div class="change-date">📅 ${c.day} Marzo — ${c.wd||''}</div><div class="change-old">Prima: ${c.old}</div><div class="change-new">Ora: ${c.new}</div>`;
     el.appendChild(item);
   });
 }
 
 function detectChanges(oldDays, newDays) {
-  const changes = [];
+  const ch = [];
   for (let d=1;d<=31;d++) {
-    const o = oldDays[d];
-    const n = newDays[d];
+    const o = oldDays[d], n = newDays[d];
     if (!o && !n) continue;
-    const oldDesc = o ? describeDay(o) : 'Non presente';
-    const newDesc = n ? describeDay(n) : 'Rimosso';
-    if (oldDesc !== newDesc) {
-      changes.push({ day:d, wd: n?.wd||o?.wd||'', old:oldDesc, new:newDesc });
-    }
+    const od = o ? describeDay(o) : 'Non presente';
+    const nd = n ? describeDay(n) : 'Rimosso';
+    if (od !== nd) ch.push({ day:d, wd:n?.wd||o?.wd||'', old:od, new:nd });
   }
-  return changes;
+  return ch;
 }
-
 function describeDay(info) {
   if (!info) return 'Vuoto';
   if (info.type==='off') return 'Giorno OFF';
@@ -441,96 +767,6 @@ function describeDay(info) {
   return info.type;
 }
 
-async function loadRoster() {
-  const btn = document.querySelector('.sync-btn');
-  btn.textContent = '⟳ Carico...';
-  btn.disabled = true;
-  try {
-    const res = await fetch(API_URL + '/latest', {
-      headers: { 'X-Access-Key': API_KEY }
-    });
-    const data = await res.json();
-    const record = data.record || {};
-    allRosters = parseRosterRecord(record);
-
-    // Build month selector
-    const keys = Object.keys(allRosters).filter(k => k.match(/^\d{4}-\d{2}$/)).sort();
-    const sel = document.getElementById('monthSelect');
-    sel.innerHTML = '';
-    keys.forEach(k => {
-      const r = allRosters[k];
-      const opt = document.createElement('option');
-      opt.value = k;
-      opt.textContent = r.month || k;
-      sel.appendChild(opt);
-    });
-
-    // Default to most recent month
-    if (!currentMonthKey || !allRosters[currentMonthKey]) {
-      currentMonthKey = keys[keys.length - 1] || null;
-    }
-    if (currentMonthKey) {
-      sel.value = currentMonthKey;
-      displayMonth(currentMonthKey);
-    }
-
-    // Load PDFs from separate bin
-    try {
-      const pRes = await fetch(`https://api.jsonbin.io/v3/b/${PDF_BIN_ID}/latest`, {
-        headers: { 'X-Access-Key': API_KEY }
-      });
-      const pData = await pRes.json();
-      allPdfs = pData.record || {};
-    } catch(e) { console.log('PDF load failed', e); }
-
-    document.getElementById('syncDate').textContent = new Date().toLocaleString('it-IT');
-  } catch(e) {
-    const cached = localStorage.getItem('roster_cache');
-    if (cached) {
-      currentDays = JSON.parse(cached);
-      buildCalendar(currentDays, []);
-      buildList(currentDays, []);
-    }
-    document.getElementById('syncDate').textContent = 'Offline';
-  }
-  btn.textContent = '⟳ Aggiorna';
-  btn.disabled = false;
-}
-
-function displayMonth(key) {
-  const roster = allRosters[key];
-  if (!roster) return;
-  currentMonthKey = key;
-
-  const savedPrev = localStorage.getItem('roster_prev_' + key);
-  if (savedPrev) previousDays = JSON.parse(savedPrev);
-  const newDays = roster.days || {};
-  if (Object.keys(previousDays).length > 0) changes = detectChanges(previousDays, newDays);
-  currentDays = newDays;
-  localStorage.setItem('roster_prev_' + key, JSON.stringify(currentDays));
-
-  const changedDays = changes.map(c => c.day);
-  document.getElementById('monthSelect').value = key;
-  document.getElementById('statFH').textContent = roster.fh || '—';
-  document.getElementById('statOff').textContent = roster.off || '—';
-  document.getElementById('statRem').textContent = roster.remaining || '—';
-  document.getElementById('syncDate').textContent = roster.updated || 'Mai';
-
-  // Update calendar month label
-  window._currentRosterMonth = roster.month || key;
-  window._currentRosterMonthKey = key;
-
-  buildCalendar(currentDays, changedDays, roster);
-  buildList(currentDays, changedDays, roster);
-  buildChanges(changes);
-}
-
-function openPdf(key) {
-  const url = allPdfs[key];
-  if (!url) return;
-  window.open(url, '_blank');
-}
-
 function legacyMonthKey(monthStr) {
   const months = {gen:'01',feb:'02',mar:'03',apr:'04',mag:'05',giu:'06',
                   lug:'07',ago:'08',set:'09',ott:'10',nov:'11',dic:'12'};
@@ -540,17 +776,13 @@ function legacyMonthKey(monthStr) {
   const y = parts[1] || '2026';
   return `${y}-${m}`;
 }
-
 function parseRosterRecord(record) {
   if (!record || typeof record !== 'object') return {};
-  // New format: keys like "2026-03"
   const monthKeys = Object.keys(record).filter(k => k.match(/^\d{4}-\d{2}$/));
   if (monthKeys.length > 0) {
-    // Validate: each value must have days
     const valid = monthKeys.filter(k => record[k] && record[k].days);
     if (valid.length > 0) return record;
   }
-  // Legacy: single roster with days at top level
   if (record.days) {
     const mk = record.month ? legacyMonthKey(record.month) : '2026-03';
     return { [mk]: record };
@@ -558,25 +790,88 @@ function parseRosterRecord(record) {
   return {};
 }
 
-function switchMonth(key) {
-  if (key && allRosters[key]) displayMonth(key);
+async function loadRoster() {
+  const btn = document.querySelector('.sync-btn');
+  btn.textContent = '⟳ Carico...';
+  btn.disabled = true;
+  try {
+    const res = await fetch(API_URL + '/latest', { headers: { 'X-Access-Key': API_KEY } });
+    const data = await res.json();
+    const record = data.record || {};
+    allRosters = parseRosterRecord(record);
+
+    const keys = Object.keys(allRosters).filter(k => k.match(/^\d{4}-\d{2}$/)).sort();
+    const sel = document.getElementById('monthSelect');
+    sel.innerHTML = '';
+    keys.forEach(k => {
+      const r = allRosters[k];
+      const opt = document.createElement('option');
+      opt.value = k; opt.textContent = r.month || k;
+      sel.appendChild(opt);
+    });
+    if (!currentMonthKey || !allRosters[currentMonthKey]) currentMonthKey = keys[keys.length-1] || null;
+    if (currentMonthKey) { sel.value = currentMonthKey; displayMonth(currentMonthKey); }
+
+    // Carica URL PDF dal bin dedicato
+    try {
+      const pRes = await fetch(PDF_API_URL + '/latest', { headers: { 'X-Access-Key': API_KEY } });
+      const pData = await pRes.json();
+      allPdfs = pData.record || {};
+    } catch(e) { console.log('[PDF bin] load failed:', e); }
+
+    document.getElementById('syncDate').textContent = new Date().toLocaleString('it-IT');
+  } catch(e) {
+    console.warn('[loadRoster] offline mode:', e.message);
+    document.getElementById('syncDate').textContent = 'Offline';
+  }
+
+  // Costruisci sempre la lista PDF (prende anche quelli in IDB)
+  await buildRosterPdfList();
+
+  btn.textContent = '⟳ Aggiorna';
+  btn.disabled = false;
 }
 
+function displayMonth(key) {
+  const roster = allRosters[key];
+  if (!roster) return;
+  currentMonthKey = key;
+  const savedPrev = localStorage.getItem('roster_prev_' + key);
+  if (savedPrev) previousDays = JSON.parse(savedPrev);
+  const newDays = roster.days || {};
+  if (Object.keys(previousDays).length > 0) changes = detectChanges(previousDays, newDays);
+  currentDays = newDays;
+  localStorage.setItem('roster_prev_' + key, JSON.stringify(currentDays));
+  const changedDays = changes.map(c => c.day);
+  document.getElementById('monthSelect').value = key;
+  document.getElementById('statFH').textContent  = roster.fh || '—';
+  document.getElementById('statOff').textContent  = roster.off || '—';
+  document.getElementById('statRem').textContent  = roster.remaining || '—';
+  document.getElementById('syncDate').textContent = roster.updated || 'Mai';
+  window._currentRosterMonth    = roster.month || key;
+  window._currentRosterMonthKey = key;
+  buildCalendar(currentDays, changedDays);
+  buildList(currentDays, changedDays);
+  buildChanges(changes);
+}
+
+function switchMonth(key) { if (key && allRosters[key]) displayMonth(key); }
 function prevMonth() {
   const keys = Object.keys(allRosters).filter(k => k.match(/^\d{4}-\d{2}$/)).sort();
   const idx = keys.indexOf(currentMonthKey);
-  if (idx > 0) displayMonth(keys[idx - 1]);
+  if (idx > 0) displayMonth(keys[idx-1]);
 }
-
 function nextMonth() {
   const keys = Object.keys(allRosters).filter(k => k.match(/^\d{4}-\d{2}$/)).sort();
   const idx = keys.indexOf(currentMonthKey);
-  if (idx < keys.length - 1) displayMonth(keys[idx + 1]);
+  if (idx < keys.length-1) displayMonth(keys[idx+1]);
 }
 
 function openModal(d, info) {
-  const mLabel = window._currentRosterMonth || 'Marzo 2026'; document.getElementById('mDate').textContent = `${wdFull[info.wd]||''} · ${mLabel}`;
-  const mShort = (window._currentRosterMonth||'Marzo 2026').split(' ')[0]; document.getElementById('mTitle').textContent = `${d} ${mShort}`;
+  const mLabel = window._currentRosterMonth || 'Marzo 2026';
+  document.getElementById('mDate').textContent = `${wdFull[info.wd]||''} · ${mLabel}`;
+  const mShort = (window._currentRosterMonth||'Marzo 2026').split(' ')[0];
+  document.getElementById('mTitle').textContent = `${d} ${mShort}`;
   let html = '';
   if (info.ckin) html += `<div class="modal-row"><span class="k">Check-In</span><span class="v blue">${info.ckin} UTC</span></div>`;
   if (info.type==='off') html += `<div class="modal-row"><span class="k">Giornata</span><span class="v">🏠 Giorno libero</span></div>`;
@@ -597,20 +892,26 @@ function openModal(d, info) {
   document.getElementById('mBody').innerHTML = html;
   document.getElementById('modal').classList.add('open');
 }
-
 function handleOverlay(e) {
   if (e.target===document.getElementById('modal')) document.getElementById('modal').classList.remove('open');
 }
 
+// ── switchTab: gestisce tutti e 5 i tab ──
+const ALL_TABS = ['cal','list','changes','rosters','docs'];
 function switchTab(tab) {
-  ['cal','list','changes','docs'].forEach(t => {
+  ALL_TABS.forEach(t => {
     document.getElementById('view-'+t).classList.toggle('active', t===tab);
     const btn = document.getElementById('btn-'+t);
-    btn.classList.toggle('active', t===tab);
+    if (btn) btn.classList.toggle('active', t===tab);
   });
+  // Quando si apre il tab Roster, ricostruisci la lista (può avere nuovi IDB)
+  if (tab === 'rosters') buildRosterPdfList();
 }
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
+// Boot
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
+}
 loadRoster();
 </script>
 </body>
