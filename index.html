@@ -243,12 +243,6 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
   <button class="sync-btn" onclick="loadRoster()">⟳ Aggiorna</button>
 </div>
 
-<div class="roster-actions">
-  <button class="sync-btn" onclick="triggerRosterImport()">📄 Importa roster PDF</button>
-  <button class="sync-btn" onclick="openCompanyRoster()">🌐 Apri portale Neos</button>
-</div>
-<input type="file" id="rosterPdfInput" accept="application/pdf" style="display:none">
-
 <!-- CAL VIEW -->
 <div class="view active" id="view-cal">
   <div class="cal-header-row">
@@ -275,8 +269,8 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
             style="width:100%;height:60vh;border:1px solid var(--border);border-radius:8px;background:white;"></iframe>
   </div>
   <div class="roster-actions">
-    <button class="sync-btn" onclick="triggerRosterImport()">📄 Importa roster PDF</button>
-    <button class="sync-btn" onclick="openCompanyRoster()">🌐 Apri portale Neos</button>
+    <button class="sync-btn" onclick="importRoster()">📄 Importa roster PDF</button>
+    <button class="sync-btn" onclick="openNeosPortal()">🌐 Apri portale Neos</button>
   </div>
   <input type="file" id="rosterPdfInput" accept="application/pdf" style="display:none">
   <div style="padding:8px 0 12px">
@@ -330,7 +324,7 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
 
 <script>
 // ── Variabili globali ──
-const APP_VERSION = '4.0';
+const APP_VERSION = '4.1';
 const CONFIG = {
   BIN_ID: '69a8690d43b1c97be9b354e6',
   PDF_BIN_ID: '69a9c428d0ea881f40f272de',
@@ -442,6 +436,14 @@ function openCompanyRoster(){
   window.location.href = 'https://my.neosair.it';
 }
 
+function importRoster(){
+  triggerRosterImport();
+}
+
+function openNeosPortal(){
+  openCompanyRoster();
+}
+
 function getMonthKeyFromLabel(monthStr) {
   const months = {gen:'01',feb:'02',mar:'03',apr:'04',mag:'05',giu:'06',lug:'07',ago:'08',set:'09',ott:'10',nov:'11','dic':'12'};
   if (!monthStr) return new Date().toISOString().substring(0,7);
@@ -462,63 +464,145 @@ function loadScript(src) {
   });
 }
 
-function parseNeosRoster(text) {
-  const DAY_ABB={su:'dom',mo:'lun',tu:'mar',we:'mer',th:'gio',fr:'ven',sa:'sab'};
-  const MNAMES=['','Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
-  const SKIP=new Set(['DEP','ARR','ETD','ETA','FH','DH','HTL']);
-  let fhTotal='',offCount='',remaining='',month='';
-  const days={};
-  const mMatch=text.match(/From\s+(\d{2})\/(\d{2})\/(\d{4})/);
-  if (mMatch) month=MNAMES[parseInt(mMatch[2],10)]+' '+mMatch[3];
-  const fhM=text.match(/Flight Hours\b[\s\S]*?(\d{2,3}[.,]\d{2})/i)||text.match(/(\d{2,3}[.,]\d{2})\s+Holidays/i);
-  if (fhM) fhTotal=fhM[1].replace('.',':').replace(',',':');
-  const offM=text.match(/Day\s+OFF[\s\S]*?Month[\s\S]*?\b(\d{1,2})\b/i);
-  if (offM) offCount=offM[1];
-  const remMatch = text.match(/Remaining\s*(-?\d+)/i);
-  if (remMatch) remaining = remMatch[1];
-  const targetMonth=mMatch?parseInt(mMatch[2],10):new Date().getMonth()+1;
-  const chunks=text.split(/(?=\b\d{2}\/\d{2}\/\d{4}\s+(?:su|mo|tu|we|th|fr|sa)\b)/);
-  const rawChunks={};
-  for (const chunk of chunks) {
-    const dm=chunk.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(su|mo|tu|we|th|fr|sa)\b\s*([\s\S]*)/i);
-    if (!dm) continue;
-    const day=parseInt(dm[1],10),mo=parseInt(dm[2],10);
-    if (mo!==targetMonth) continue;
-    rawChunks[day]={wd:DAY_ABB[dm[4]]||dm[4],rest:dm[5]||''};
-  }
-  for (let day=1;day<=31;day++) {
-    const rc=rawChunks[day];
-    if (!rc) continue;
-    const {wd,rest}=rc;
-    if (/\bLAYOVER\b/i.test(rest)) { days[day]={type:'layover',wd,htl:true,city:''}; continue; }
-    if (/OFF\(R\)/i.test(rest))     { days[day]={type:'offr',wd}; continue; }
-    if (/\bOFF\b/i.test(rest)&&!/[A-Z]{3}\s+[A-Z>]{3}\s+\d{2}:\d{2}/.test(rest)) { days[day]={type:'off',wd}; continue; }
-    const ckin=(()=>{const c=rest.match(/\.{3,}\s+(\d{2}:\d{2})/);return c?c[1]:'';})();
-    const htl=/\bHTL\b/.test(rest);
-    const flights=extractFlights(rest,SKIP);
-    if (flights.length>0) {
-      const allDH=flights.every(f=>f.dh);
-      days[day]={type:allDH?'dh':'flight',wd,ckin,htl,flights};
-    } else if (ckin) {
-      days[day]={type:'flight',wd,ckin,htl,flights:[]};
+function parseRosterPDF(text) {
+  const DAY_RE = /^(\d{2}\/\d{2}\/\d{4})\s+(su|mo|tu|we|th|fr|sa)\b\s*(.*)$/i;
+  const IGNORE_RE = /\b(LEGENDA|Flight Hours|DOCUMENT EXPIRATION|ROUTE EXPIRATION)\b/i;
+  const TRANSPORT_RE = /\b(FRECCIA\d+|ITALO\d+|ROMA\s+TERMINI|TERMINI|NAVETTA|TRANSFER|PULLMAN|TRENO)\b/i;
+
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const blocks = [];
+  let current = null;
+  for (const line of lines) {
+    if (IGNORE_RE.test(line)) continue;
+    if (DAY_RE.test(line)) {
+      if (current) blocks.push(current);
+      current = { header: line, lines: [line] };
+    } else if (current) {
+      current.lines.push(line);
     }
   }
-  return {days,daysFound:Object.keys(days).length,month,fh:fhTotal,off:offCount,remaining};
+  if (current) blocks.push(current);
+
+  const entries = blocks.map(block => {
+    const m = block.header.match(DAY_RE);
+    const date = m ? m[1] : '';
+    const detail = block.lines.join(' ').replace(/\s+/g, ' ').trim();
+    const remarks = [];
+
+    const hasFlightPattern = /(?:(?:NO\d+|AZ\d+|[A-Z]{2}\d{2,4}|\d{3,4})\s+)?(?:[A-Z]{3}|>)\s+(?:[A-Z]{3}|>)\s+\d{2}:\d{2}/.test(detail);
+    let dutyType = 'FLIGHT';
+    if (/OFF\(R\)/i.test(detail) || /\bOFF\b/i.test(detail)) dutyType = 'OFF';
+    else if (/\bLAYOVER\b/i.test(detail)) dutyType = 'LAYOVER';
+    else if (/\bSIM\b/i.test(detail)) dutyType = 'SIM';
+    else if (/\bMED(ICAL)?\b/i.test(detail)) dutyType = 'MEDICAL';
+    else if (/\b(TRAINING|TRG|COURSE)\b/i.test(detail)) dutyType = 'TRAINING';
+    else if (TRANSPORT_RE.test(detail) || (!hasFlightPattern && (/\bDH\s+[A-Z]{3}\s+[A-Z]{3}\b/i.test(detail) || /\b[A-Za-z]+\s*-\s*[A-Z]{3}\b/.test(detail)))) dutyType = 'TRANSPORT';
+    else if (/\bDH\b/i.test(detail)) dutyType = 'DH';
+
+    const flightSegments = [];
+    const segRe = /(?:(NO\d+|AZ\d+|[A-Z]{2}\d{2,4}|\d{3,4})\s+)?([A-Z]{3}|>)\s+([A-Z]{3}|>)\s+(\d{2}:\d{2})(?:\s+(\d{2}:\d{2}))?/g;
+    let sm;
+    while ((sm = segRe.exec(detail)) !== null) {
+      flightSegments.push({
+        flightNumber: sm[1] || '',
+        departure: sm[2],
+        arrival: sm[3],
+        etd: sm[4] || '',
+        eta: sm[5] || ''
+      });
+    }
+
+    const continuation = detail.match(/(?:NO\d+|AZ\d+|\d{3,4})\s+([A-Z]{3})\s+>\s+(\d{2}:\d{2})/i);
+    if (continuation && flightSegments.length === 0) {
+      flightSegments.push({ flightNumber: '', departure: continuation[1], arrival: '>', etd: continuation[2], eta: '' });
+      remarks.push('CONTINUATION_SEGMENT');
+    }
+
+    let departure = '';
+    let arrival = '';
+    let etd = '';
+    let eta = '';
+    let flightNumber = '';
+    if (flightSegments[0]) {
+      ({ departure, arrival, etd, eta, flightNumber } = flightSegments[0]);
+      if (etd && eta && eta < etd) remarks.push('OVERNIGHT(+1)');
+      if (arrival === '>') remarks.push('ARRIVAL_FROM_PREVIOUS_SEGMENT');
+    }
+    if (block.lines.length > 1) remarks.push('MULTILINE_DUTY');
+
+    return {
+      date,
+      dutyType,
+      departure,
+      arrival,
+      etd,
+      eta,
+      flightNumber,
+      remarks: [detail, ...remarks].join(' | ')
+    };
+  });
+
+  console.log('[parseRosterPDF] parsed blocks:', blocks.length);
+  console.log('[parseRosterPDF] normalized entries:', entries);
+  return entries;
 }
 
-function extractFlights(rest,SKIP) {
-  const flights=[];
-  const segRe=/(?:(NO\d+|AZ\d+|\d{3,4})\s+)?([A-Z]{3})\s+([A-Z]{3}|>)\s+(\d{2}:\d{2})\s*(\d{2}:\d{2})?\s*(\d{2}[.,]\d{2})?/g;
-  let m;
-  while ((m=segRe.exec(rest))!==null) {
-    const fn=m[1]||'',dep=m[2],arr=m[3],etd=m[4],eta=m[5]||'',fh=(m[6]||'').replace('.',':').replace(',',':');
-    if (SKIP.has(dep)||SKIP.has(arr)) continue;
-    const after=rest.substring(m.index+m[0].length,m.index+m[0].length+60);
-    const before=rest.substring(Math.max(0,m.index-10),m.index);
-    const isDH=/\bDH\b/.test(after)||/\bDH\b/.test(before);
-    flights.push({fn,dep,arr:arr==='>'?'···':arr,etd,eta,fh,dh:isDH});
+function parseNeosRoster(text) {
+  const DAY_ABB = { su:'dom', mo:'lun', tu:'mar', we:'mer', th:'gio', fr:'ven', sa:'sab' };
+  const MNAMES = ['', 'Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+  const days = {};
+
+  let fhTotal = '', offCount = '', remaining = null, month = '';
+  const mMatch = text.match(/From\s+(\d{2})\/(\d{2})\/(\d{4})/);
+  if (mMatch) month = MNAMES[parseInt(mMatch[2], 10)] + ' ' + mMatch[3];
+  const fhM = text.match(/Flight Hours\b[\s\S]*?(\d{2,3}[.,]\d{2})/i) || text.match(/(\d{2,3}[.,]\d{2})\s+Holidays/i);
+  if (fhM) fhTotal = fhM[1].replace('.', ':').replace(',', ':');
+  const offM = text.match(/Day\s+OFF[\s\S]*?Month[\s\S]*?\b(\d{1,2})\b/i);
+  if (offM) offCount = offM[1];
+  const remMatches = [...text.matchAll(/Remaining\s*(-?\d+)/gi)];
+  if (remMatches.length > 0) remaining = parseInt(remMatches[remMatches.length - 1][1], 10);
+
+  const normalized = parseRosterPDF(text);
+  for (const e of normalized) {
+    const dm = e.date.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (!dm) continue;
+    const day = parseInt(dm[1], 10);
+    const jsDate = new Date(parseInt(dm[3], 10), parseInt(dm[2], 10) - 1, day);
+    const wd = DAY_ABB[['su','mo','tu','we','th','fr','sa'][jsDate.getDay()]] || '';
+
+    if (e.dutyType === 'OFF') {
+      days[day] = /OFF\(R\)/i.test(e.remarks) ? { type: 'offr', wd } : { type: 'off', wd };
+      continue;
+    }
+    if (e.dutyType === 'LAYOVER') {
+      days[day] = { type: 'layover', wd, htl: true, city: '' };
+      continue;
+    }
+
+    const isDh = e.dutyType === 'DH';
+    const isOffice = ['TRAINING', 'SIM', 'MEDICAL', 'TRANSPORT'].includes(e.dutyType);
+    const type = isOffice ? 'ufficio' : (isDh ? 'dh' : 'flight');
+    const flights = (e.departure || e.arrival || e.etd || e.eta || e.flightNumber) ? [{
+      fn: e.flightNumber || '',
+      dep: e.departure || '',
+      arr: e.arrival === '>' ? '···' : (e.arrival || ''),
+      etd: e.etd || '',
+      eta: e.eta || '',
+      fh: '',
+      dh: isDh,
+      note: e.remarks || ''
+    }] : [];
+
+    days[day] = {
+      type,
+      wd,
+      ckin: '',
+      htl: /\bHTL\b/i.test(e.remarks),
+      flights
+    };
   }
-  return flights;
+
+  return { days, daysFound: Object.keys(days).length, month, fh: fhTotal, off: offCount, remaining };
 }
 
 async function importPDF(event) {
@@ -540,6 +624,7 @@ async function importPDF(event) {
     }
 
     const result = parseNeosRoster(fullText);
+    console.log("Remaining extracted from PDF:", result.remaining);
     if (result.daysFound === 0) {
       alert('Nessun giorno trovato nel PDF.');
       return;
@@ -553,7 +638,7 @@ async function importPDF(event) {
       month: monthLabel,
       fh: result.fh || existing.fh || '—',
       off: result.off || existing.off || '—',
-      remaining: result.remaining || existing.remaining || '—',
+      remaining: (result.remaining ?? existing.remaining ?? '—'),
       updated: new Date().toLocaleString('it-IT'),
       days: result.days
     };
@@ -1006,9 +1091,24 @@ document.getElementById('rosterPdfInput').addEventListener('change', importPDF);
 // Boot
 document.getElementById('appVersionLabel').textContent = `v${APP_VERSION}`;
 
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register(`sw.js?v=${APP_VERSION}`).catch(err => {
-    console.warn('[SW] register failed:', err.message);
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("./sw.js").then(reg => {
+
+    if (reg.waiting) {
+      reg.waiting.postMessage("SKIP_WAITING");
+      window.location.reload();
+    }
+
+    reg.addEventListener("updatefound", () => {
+      const newWorker = reg.installing;
+
+      newWorker.addEventListener("statechange", () => {
+        if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+          window.location.reload();
+        }
+      });
+    });
+
   });
 }
 loadRoster();
