@@ -562,7 +562,7 @@ async function importPDF(event) {
 }
 
 function parseRosterPDF(text) {
-  const DAY_RE = /^(\d{2}\/\d{2}\/\d{4})\b\s*(.*)$/i;
+  const DAY_RE = /^(\d{2}\/\d{2}\/\d{4})\s+(su|mo|tu|we|th|fr|sa)\b\s*(.*)$/i;
   const IGNORE_RE = /\b(LEGENDA|Flight Hours|DOCUMENT EXPIRATION|ROUTE EXPIRATION)\b/i;
   const TRANSPORT_RE = /\b(FRECCIA\d+|ITALO\d+|ROMA\s+TERMINI|TERMINI|NAVETTA|TRANSFER|PULLMAN|TRENO)\b/i;
 
@@ -656,8 +656,8 @@ function parseNeosRoster(text) {
   if (fhM) fhTotal = fhM[1].replace('.', ':').replace(',', ':');
   const offM = text.match(/Day\s+OFF[\s\S]*?Month[\s\S]*?\b(\d{1,2})\b/i);
   if (offM) offCount = offM[1];
-  const remMatch = text.match(/Remaining\s*(-?\d+)/i);
-  if (remMatch) remaining = parseInt(remMatch[1], 10);
+  const remMatches = [...text.matchAll(/Remaining\s*(-?\d+)/gi)];
+  if (remMatches.length > 0) remaining = parseInt(remMatches[remMatches.length - 1][1], 10);
 
   const normalized = parseRosterPDF(text);
   for (const e of normalized) {
@@ -697,31 +697,6 @@ function parseNeosRoster(text) {
       htl: /\bHTL\b/i.test(e.remarks),
       flights
     };
-
-    const isOvernight = !!(e.etd && e.eta && e.eta < e.etd);
-    if (isOvernight) {
-      const nextDate = new Date(parseInt(dm[3], 10), parseInt(dm[2], 10) - 1, day + 1);
-      const nextDay = nextDate.getDate();
-      const nextWd = DAY_ABB[['su','mo','tu','we','th','fr','sa'][nextDate.getDay()]] || '';
-      if (!days[nextDay]) {
-        days[nextDay] = {
-          type,
-          wd: nextWd,
-          ckin: '',
-          htl: /\bHTL\b/i.test(e.remarks),
-          flights: [{
-            fn: e.flightNumber || '',
-            dep: '···',
-            arr: e.arrival === '>' ? '···' : (e.arrival || ''),
-            etd: '',
-            eta: e.eta || '',
-            fh: '',
-            dh: isDh,
-            note: ((e.remarks || '') + ' | CONTINUED_FROM_PREVIOUS_DAY').trim()
-          }]
-        };
-      }
-    }
   }
 
   return { days, daysFound: Object.keys(days).length, month, fh: fhTotal, off: offCount, remaining };
