@@ -91,6 +91,26 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
 .cday-icon { position:absolute; bottom:4px; right:4px; font-size:11px; }
 .cday.is-overnight-start { border-right:2px solid var(--accent) !important; background:linear-gradient(to right, var(--flight), #dbeafe) !important; }
 .cday.is-overnight-end { border-left:2px solid var(--accent) !important; background:linear-gradient(to left, var(--flight), #dbeafe) !important; }
+.flight-overnight-start{
+border-right:4px solid #2563eb;
+position:relative;
+}
+
+.flight-overnight-start::after{
+content:"▶";
+position:absolute;
+right:-10px;
+top:50%;
+transform:translateY(-50%);
+color:#2563eb;
+font-size:14px;
+}
+
+.flight-overnight-arrival{
+border-left:4px solid #2563eb;
+font-size:12px;
+color:#1e40af;
+}
 /* LIST */
 .view { display:none; padding:0 16px; }
 .view.active { display:block; }
@@ -324,7 +344,7 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
 
 <script>
 // ── Variabili globali ──
-const APP_VERSION = '4.2';
+const APP_VERSION = '4.3';
 const CONFIG = {
   BIN_ID: '69a8690d43b1c97be9b354e6',
   PDF_BIN_ID: '69a9c428d0ea881f40f272de',
@@ -551,6 +571,14 @@ function parseRosterPDF(text) {
     else if (TRANSPORT_RE.test(detail)) dutyType = 'TRANSPORT';
     else if (/\bDH\b/i.test(detail)) dutyType = 'DH';
 
+    const continuationArrival = (() => {
+      for (const ln of duty.lines) {
+        const mm = ln.match(/^>\s*([A-Z]{3})\s+(\d{2}:\d{2})$/);
+        if (mm) return { arr: mm[1], eta: mm[2] };
+      }
+      return null;
+    })();
+
     const first = segments[0] || { flightNumber: '', departure: '', arrival: '', etd: '', eta: '' };
     return {
       date: duty.date,
@@ -558,6 +586,7 @@ function parseRosterPDF(text) {
       checkIn,
       hotel,
       segments,
+      continuationArrival,
       departure: first.departure,
       arrival: first.arrival,
       etd: first.etd,
@@ -597,6 +626,7 @@ function parseNeosRoster(text) {
 
   remaining = parsed.remaining;
 
+  let pendingContinuation = null;
   for (const duty of parsed.duties) {
     const dm = duty.date.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
     if (!dm) continue;
@@ -616,9 +646,34 @@ function parseNeosRoster(text) {
       continue;
     }
 
+    if (pendingContinuation && duty.continuationArrival) {
+      const prevDay = pendingContinuation.day;
+      const prevIdx = pendingContinuation.index;
+      const prevFlight = days[prevDay] && days[prevDay].flights ? days[prevDay].flights[prevIdx] : null;
+      if (prevFlight) {
+        prevFlight.arr = duty.continuationArrival.arr;
+        prevFlight.eta = duty.continuationArrival.eta;
+        prevFlight.overnight = true;
+        days[prevDay].overnightStart = true;
+      }
+      days[day] = {
+        type: 'arrival',
+        wd,
+        arrivalOnly: true,
+        overnightArrival: true,
+        flights: [{
+          arr: duty.continuationArrival.arr,
+          eta: duty.continuationArrival.eta,
+          overnight: true
+        }]
+      };
+      pendingContinuation = null;
+      continue;
+    }
+
     const isDh = duty.dutyType === 'DH';
     const isOffice = ['TRAINING', 'SIM', 'MEDICAL', 'TRANSPORT'].includes(duty.dutyType);
-    const type = isOffice ? 'ufficio' : (isDh ? 'dh' : 'flight');
+    const type = isDh ? 'dh' : (isOffice ? 'ufficio' : 'flight');
 
     const flights = (duty.segments || []).map(seg => ({
       fn: seg.flightNumber || '',
@@ -628,46 +683,43 @@ function parseNeosRoster(text) {
       eta: seg.eta || '',
       fh: '',
       dh: isDh,
+      overnight: false,
       note: duty.remarks || ''
     }));
 
-    const etd = duty.etd || '';
-    const eta = duty.eta || '';
-    const arrival = duty.arrival === '>' ? '···' : (duty.arrival || '');
-    const flightNumber = duty.flightNumber || '';
-
-    let dutyDay = day;
-
-    days[dutyDay] = {
+    days[day] = {
       type,
       wd,
-      ckin: '',
-      htl: /\bHTL\b/i.test(duty.remarks),
+      ckin: duty.checkIn || '',
+      htl: !!duty.hotel,
       flights
     };
 
-    if (etd && eta && eta < etd) {
-
-      const nextDay = dutyDay + 1;
-
-      if (!days[nextDay]) {
-        days[nextDay] = {
-          type: 'flight',
-          wd: '',
-          flights: [{
-            fn: flightNumber || '',
-            dep: '',
-            arr: arrival || '',
-            etd: '',
-            eta: eta || '',
-            fh: '',
-            dh: isDh,
-            note: 'OVERNIGHT ARRIVAL'
-          }]
-        };
+    flights.forEach((f, idx) => {
+      if (f.arr === '···') {
+        pendingContinuation = { day, index: idx };
       }
-
-    }
+      if (f.etd && f.eta && f.eta < f.etd) {
+        f.overnight = true;
+        days[day].overnightStart = true;
+        const nextDate = new Date(yearNum, monthNum, day + 1);
+        const nextDay = nextDate.getDate();
+        const nextWd = DAY_ABB[['su','mo','tu','we','th','fr','sa'][nextDate.getDay()]] || '';
+        if (!days[nextDay]) {
+          days[nextDay] = {
+            type: 'arrival',
+            wd: nextWd,
+            arrivalOnly: true,
+            overnightArrival: true,
+            flights: [{
+              arr: f.arr === '···' ? '' : f.arr,
+              eta: f.eta || '',
+              overnight: true
+            }]
+          };
+        }
+      }
+    });
   }
 
   return { days, daysFound: Object.keys(days).length, month, fh: fhTotal, off: offCount, remaining };
@@ -868,15 +920,17 @@ function buildCalendar(days, changedDays) {
     if (d===TODAY) cls += ' is-today';
     if (changedDays && changedDays.includes(d)) cls += ' is-changed';
     const hasOpenEnd = info && info.flights && info.flights.some(f => f.arr==='···');
-    const isCont = info && info.flights && info.flights.some(f => f.cont);
+    const isArrivalOnly = info && info.arrivalOnly;
     if (hasOpenEnd) cls += ' is-overnight-start';
-    if (isCont) cls += ' is-overnight-end';
+    if (isArrivalOnly) cls += ' is-overnight-end';
+    if (info && info.overnightStart) cls += ' flight-overnight-start';
+    if (info && info.overnightArrival) cls += ' flight-overnight-arrival';
     cell.className = cls;
     let route = '';
     if (info && info.flights && info.flights[0]) {
       const f = info.flights[0];
-      if (hasOpenEnd) route = `<div class="cday-route">${f.dep||''}<br><span style="color:var(--accent);font-size:8px">▸${d+1}</span></div>`;
-      else if (isCont) route = `<div class="cday-route"><span style="color:var(--accent);font-size:8px">${d-1}▸</span><br>${f.arr||''}</div>`;
+      if (info.arrivalOnly) route = `<div class="cday-route">ARR ${f.arr||''}<br>${f.eta||''}</div>`;
+      else if (hasOpenEnd) route = `<div class="cday-route">${f.dep||''}<br><span style="color:var(--accent);font-size:8px">▸${d+1}</span></div>`;
       else route = `<div class="cday-route">${f.dep||''}<br>${f.arr||''}</div>`;
     } else if (info && info.type==='layover') {
       route = `<div class="cday-route" style="font-size:9px;color:#1565c0">${info.city||'LAY'}</div>`;
