@@ -562,86 +562,110 @@ async function importPDF(event) {
 }
 
 function parseRosterPDF(text) {
-  const DAY_RE = /^(\d{2}\/\d{2}\/\d{4})\s+(su|mo|tu|we|th|fr|sa)\b\s*(.*)$/i;
-  const IGNORE_RE = /\b(LEGENDA|Flight Hours|DOCUMENT EXPIRATION|ROUTE EXPIRATION)\b/i;
-  const TRANSPORT_RE = /\b(FRECCIA\d+|ITALO\d+|ROMA\s+TERMINI|TERMINI|NAVETTA|TRANSFER|PULLMAN|TRENO)\b/i;
+  const DAY_REGEX = /^(\d{2}\/\d{2}\/\d{4})\b\s*(.*)$/;
+  const summaryScope = (() => {
+    const idxs = [text.search(/Flight\s*Hours/i), text.search(/Day\s*OFF\s*Month/i), text.search(/Remaining\s*-?\d+/i)].filter(i => i >= 0);
+    if (idxs.length === 0) return text;
+    return text.slice(Math.min(...idxs));
+  })();
 
-  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-  const blocks = [];
-  let current = null;
+  const remMatch = summaryScope.match(/Remaining\s*(-?\d+)/i);
+  const offMatch = summaryScope.match(/Day\s*OFF\s*Month\s*(\d+)/i);
+  const fhMatch = summaryScope.match(/Flight\s*Hours.*?(\d+\.\d+)/i);
+
+  const result = {
+    duties: [],
+    remaining: remMatch ? parseInt(remMatch[1], 10) : null,
+    offMonth: offMatch ? parseInt(offMatch[1], 10) : null,
+    flightHours: fhMatch ? parseFloat(fhMatch[1]) : null
+  };
+
+  const preparedText = text
+    .replace(/\r/g, '\n')
+    .replace(/(\d{2}\/\d{2}\/\d{4})/g, '\n$1')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{2,}/g, '\n');
+
+  const lines = preparedText.split('\n').map(l => l.trim()).filter(Boolean);
+  const rawDuties = [];
+  let currentDuty = null;
+
   for (const line of lines) {
-    if (IGNORE_RE.test(line)) continue;
-    if (DAY_RE.test(line)) {
-      if (current) blocks.push(current);
-      current = { header: line, lines: [line] };
-    } else if (current) {
-      current.lines.push(line);
+    const dm = line.match(DAY_REGEX);
+    if (dm) {
+      if (currentDuty) rawDuties.push(currentDuty);
+      currentDuty = { date: dm[1], lines: [] };
+      if (dm[2]) currentDuty.lines.push(dm[2].trim());
+    } else if (currentDuty) {
+      currentDuty.lines.push(line);
     }
   }
-  if (current) blocks.push(current);
+  if (currentDuty) rawDuties.push(currentDuty);
 
-  const entries = blocks.map(block => {
-    const m = block.header.match(DAY_RE);
-    const date = m ? m[1] : '';
-    const detail = block.lines.join(' ').replace(/\s+/g, ' ').trim();
-    const remarks = [];
+  const TRANSPORT_RE = /\b(FRECCIA\d+|ITALO\d+|ROMA\s+TERMINI|TERMINI|NAVETTA|TRANSFER|PULLMAN|TRENO)\b/i;
+  const SEGMENT_RE = /([A-Z]{3})\s+([A-Z]{3}|>)\s+(\d{2}:\d{2})\s+(\d{2}:\d{2})/g;
+  const CONTINUATION_RE = /(?:\b(\d{2,4})\b\s+)?([A-Z]{3})\s+>\s+(\d{2}:\d{2})/g;
 
-    const hasFlightPattern = /(?:(?:NO\d+|AZ\d+|[A-Z]{2}\d{2,4}|\d{3,4})\s+)?(?:[A-Z]{3}|>)\s+(?:[A-Z]{3}|>)\s+\d{2}:\d{2}/.test(detail);
+  result.duties = rawDuties.map(duty => {
+    const detail = duty.lines.join(' ').replace(/\s+/g, ' ').trim();
+    const checkInMatch = detail.match(/\.{3,}\s*(\d{2}:\d{2})/);
+    const checkIn = checkInMatch ? checkInMatch[1] : '';
+    const hotel = /\bHTL\b/i.test(detail);
+
+    const segments = [];
+    let m;
+    while ((m = SEGMENT_RE.exec(detail)) !== null) {
+      const left = detail.slice(0, m.index).trim().split(/\s+/).pop() || '';
+      const fn = /^\d{2,4}$/.test(left) ? left : '';
+      segments.push({
+        flightNumber: fn,
+        departure: m[1],
+        arrival: m[2],
+        etd: m[3],
+        eta: m[4]
+      });
+    }
+
+    while ((m = CONTINUATION_RE.exec(detail)) !== null) {
+      const already = segments.some(s => s.departure === m[2] && s.arrival === '>' && s.etd === m[3]);
+      if (!already) {
+        segments.push({
+          flightNumber: m[1] || '',
+          departure: m[2],
+          arrival: '>',
+          etd: m[3],
+          eta: ''
+        });
+      }
+    }
+
     let dutyType = 'FLIGHT';
     if (/OFF\(R\)/i.test(detail) || /\bOFF\b/i.test(detail)) dutyType = 'OFF';
     else if (/\bLAYOVER\b/i.test(detail)) dutyType = 'LAYOVER';
     else if (/\bSIM\b/i.test(detail)) dutyType = 'SIM';
     else if (/\bMED(ICAL)?\b/i.test(detail)) dutyType = 'MEDICAL';
     else if (/\b(TRAINING|TRG|COURSE)\b/i.test(detail)) dutyType = 'TRAINING';
-    else if (TRANSPORT_RE.test(detail) || (!hasFlightPattern && (/\bDH\s+[A-Z]{3}\s+[A-Z]{3}\b/i.test(detail) || /\b[A-Za-z]+\s*-\s*[A-Z]{3}\b/.test(detail)))) dutyType = 'TRANSPORT';
+    else if (TRANSPORT_RE.test(detail)) dutyType = 'TRANSPORT';
     else if (/\bDH\b/i.test(detail)) dutyType = 'DH';
 
-    const flightSegments = [];
-    const segRe = /(?:(NO\d+|AZ\d+|[A-Z]{2}\d{2,4}|\d{3,4})\s+)?([A-Z]{3}|>)\s+([A-Z]{3}|>)\s+(\d{2}:\d{2})(?:\s+(\d{2}:\d{2}))?/g;
-    let sm;
-    while ((sm = segRe.exec(detail)) !== null) {
-      flightSegments.push({
-        flightNumber: sm[1] || '',
-        departure: sm[2],
-        arrival: sm[3],
-        etd: sm[4] || '',
-        eta: sm[5] || ''
-      });
-    }
-
-    const continuation = detail.match(/(?:NO\d+|AZ\d+|\d{3,4})\s+([A-Z]{3})\s+>\s+(\d{2}:\d{2})/i);
-    if (continuation && flightSegments.length === 0) {
-      flightSegments.push({ flightNumber: '', departure: continuation[1], arrival: '>', etd: continuation[2], eta: '' });
-      remarks.push('CONTINUATION_SEGMENT');
-    }
-
-    let departure = '';
-    let arrival = '';
-    let etd = '';
-    let eta = '';
-    let flightNumber = '';
-    if (flightSegments[0]) {
-      ({ departure, arrival, etd, eta, flightNumber } = flightSegments[0]);
-      if (etd && eta && eta < etd) remarks.push('OVERNIGHT(+1)');
-      if (arrival === '>') remarks.push('ARRIVAL_FROM_PREVIOUS_SEGMENT');
-    }
-    if (block.lines.length > 1) remarks.push('MULTILINE_DUTY');
-
+    const first = segments[0] || { flightNumber: '', departure: '', arrival: '', etd: '', eta: '' };
     return {
-      date,
+      date: duty.date,
       dutyType,
-      departure,
-      arrival,
-      etd,
-      eta,
-      flightNumber,
-      remarks: [detail, ...remarks].join(' | ')
+      checkIn,
+      hotel,
+      segments,
+      departure: first.departure,
+      arrival: first.arrival,
+      etd: first.etd,
+      eta: first.eta,
+      flightNumber: first.flightNumber,
+      remarks: detail
     };
   });
 
-  console.log('[parseRosterPDF] parsed blocks:', blocks.length);
-  console.log('[parseRosterPDF] normalized entries:', entries);
-  return entries;
+  console.log('[parseRosterPDF] duties:', result.duties.length, 'remaining:', result.remaining, 'offMonth:', result.offMonth, 'flightHours:', result.flightHours);
+  return result;
 }
 
 function parseNeosRoster(text) {
@@ -652,51 +676,90 @@ function parseNeosRoster(text) {
   let fhTotal = '', offCount = '', remaining = null, month = '';
   const mMatch = text.match(/From\s+(\d{2})\/(\d{2})\/(\d{4})/);
   if (mMatch) month = MNAMES[parseInt(mMatch[2], 10)] + ' ' + mMatch[3];
-  const fhM = text.match(/Flight Hours\b[\s\S]*?(\d{2,3}[.,]\d{2})/i) || text.match(/(\d{2,3}[.,]\d{2})\s+Holidays/i);
-  if (fhM) fhTotal = fhM[1].replace('.', ':').replace(',', ':');
-  const offM = text.match(/Day\s+OFF[\s\S]*?Month[\s\S]*?\b(\d{1,2})\b/i);
-  if (offM) offCount = offM[1];
-  const remMatches = [...text.matchAll(/Remaining\s*(-?\d+)/gi)];
-  if (remMatches.length > 0) remaining = parseInt(remMatches[remMatches.length - 1][1], 10);
 
-  const normalized = parseRosterPDF(text);
-  for (const e of normalized) {
-    const dm = e.date.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  const parsed = parseRosterPDF(text);
+  if (parsed.flightHours !== null && !Number.isNaN(parsed.flightHours)) {
+    fhTotal = String(parsed.flightHours).replace('.', ':');
+  } else {
+    const fhM = text.match(/Flight Hours\b[\s\S]*?(\d{2,3}[.,]\d{2})/i) || text.match(/(\d{2,3}[.,]\d{2})\s+Holidays/i);
+    if (fhM) fhTotal = fhM[1].replace('.', ':').replace(',', ':');
+  }
+
+  if (parsed.offMonth !== null && !Number.isNaN(parsed.offMonth)) {
+    offCount = String(parsed.offMonth);
+  } else {
+    const offM = text.match(/Day\s+OFF[\s\S]*?Month[\s\S]*?\b(\d{1,2})\b/i);
+    if (offM) offCount = offM[1];
+  }
+
+  remaining = parsed.remaining;
+
+  for (const duty of parsed.duties) {
+    const dm = duty.date.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
     if (!dm) continue;
+
     const day = parseInt(dm[1], 10);
-    const jsDate = new Date(parseInt(dm[3], 10), parseInt(dm[2], 10) - 1, day);
+    const monthNum = parseInt(dm[2], 10) - 1;
+    const yearNum = parseInt(dm[3], 10);
+    const jsDate = new Date(yearNum, monthNum, day);
     const wd = DAY_ABB[['su','mo','tu','we','th','fr','sa'][jsDate.getDay()]] || '';
 
-    if (e.dutyType === 'OFF') {
-      days[day] = /OFF\(R\)/i.test(e.remarks) ? { type: 'offr', wd } : { type: 'off', wd };
+    if (duty.dutyType === 'OFF') {
+      days[day] = /OFF\(R\)/i.test(duty.remarks) ? { type: 'offr', wd } : { type: 'off', wd };
       continue;
     }
-    if (e.dutyType === 'LAYOVER') {
+    if (duty.dutyType === 'LAYOVER') {
       days[day] = { type: 'layover', wd, htl: true, city: '' };
       continue;
     }
 
-    const isDh = e.dutyType === 'DH';
-    const isOffice = ['TRAINING', 'SIM', 'MEDICAL', 'TRANSPORT'].includes(e.dutyType);
+    const isDh = duty.dutyType === 'DH';
+    const isOffice = ['TRAINING', 'SIM', 'MEDICAL', 'TRANSPORT'].includes(duty.dutyType);
     const type = isOffice ? 'ufficio' : (isDh ? 'dh' : 'flight');
-    const flights = (e.departure || e.arrival || e.etd || e.eta || e.flightNumber) ? [{
-      fn: e.flightNumber || '',
-      dep: e.departure || '',
-      arr: e.arrival === '>' ? '···' : (e.arrival || ''),
-      etd: e.etd || '',
-      eta: e.eta || '',
+
+    const flights = (duty.segments || []).map(seg => ({
+      fn: seg.flightNumber || '',
+      dep: seg.departure || '',
+      arr: seg.arrival === '>' ? '···' : (seg.arrival || ''),
+      etd: seg.etd || '',
+      eta: seg.eta || '',
       fh: '',
       dh: isDh,
-      note: e.remarks || ''
-    }] : [];
+      note: duty.remarks || ''
+    }));
 
     days[day] = {
       type,
       wd,
-      ckin: '',
-      htl: /\bHTL\b/i.test(e.remarks),
+      ckin: duty.checkIn || '',
+      htl: !!duty.hotel,
       flights
     };
+
+    for (const seg of (duty.segments || [])) {
+      if (!(seg.etd && seg.eta && seg.eta < seg.etd)) continue;
+      const nextDate = new Date(yearNum, monthNum, day + 1);
+      const nextDay = nextDate.getDate();
+      const nextWd = DAY_ABB[['su','mo','tu','we','th','fr','sa'][nextDate.getDay()]] || '';
+      if (!days[nextDay]) {
+        days[nextDay] = {
+          type,
+          wd: nextWd,
+          ckin: '',
+          htl: !!duty.hotel,
+          flights: [{
+            fn: seg.flightNumber || '',
+            dep: '···',
+            arr: seg.arrival === '>' ? '···' : (seg.arrival || ''),
+            etd: '',
+            eta: seg.eta || '',
+            fh: '',
+            dh: isDh,
+            note: ((duty.remarks || '') + ' | CONTINUED_FROM_PREVIOUS_DAY').trim()
+          }]
+        };
+      }
+    }
   }
 
   return { days, daysFound: Object.keys(days).length, month, fh: fhTotal, off: offCount, remaining };
