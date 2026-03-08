@@ -440,6 +440,7 @@ async function importPDF(event) {
     }
 
     const result = parseNeosRoster(fullText);
+    console.log("Remaining extracted from PDF:", result.remaining);
     if (result.daysFound === 0) {
       status.style.color='var(--warn)';
       status.textContent='⚠️ Nessun giorno trovato — vedi testo estratto qui sotto.';
@@ -451,7 +452,7 @@ async function importPDF(event) {
     if (result.month)     { rosterData.month=result.month;         document.getElementById('fMonth').value=result.month; }
     if (result.fh)        { rosterData.fh=result.fh;               document.getElementById('fFH').value=result.fh; }
     if (result.off)       { rosterData.off=result.off;             document.getElementById('fOff').value=result.off; }
-    if (result.remaining) { rosterData.remaining=result.remaining; document.getElementById('fRem').value=result.remaining; }
+    if (result.remaining !== null) { rosterData.remaining=result.remaining; document.getElementById('fRem').value=result.remaining; }
     buildDaysList();
     markChanged();
     justImported = true;
@@ -546,7 +547,7 @@ async function importPDF(event) {
       const delta=parseInt(result.off)-parseInt(oldOff);
       diffs.push(`🏠 Giorni OFF: ${oldOff} → ${result.off} <span style="color:${delta>0?'#1b5e20':'#e65100'};font-weight:700">(${delta>0?'+':''}${delta})</span>`);
     }
-    if (oldRem && result.remaining && oldRem!==result.remaining) {
+    if (oldRem && result.remaining !== null && oldRem!==result.remaining) {
       const delta=parseInt(result.remaining)-parseInt(oldRem);
       diffs.push(`📊 Remaining: ${oldRem} → ${result.remaining} <span style="color:${delta>0?'#1b5e20':'#e65100'};font-weight:700">(${delta>0?'+':''}${delta})</span>`);
     }
@@ -648,15 +649,15 @@ function parseNeosRoster(text) {
   const MNAMES = ['', 'Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
   const days = {};
 
-  let fhTotal = '', offCount = '', remaining = '', month = '';
+  let fhTotal = '', offCount = '', remaining = null, month = '';
   const mMatch = text.match(/From\s+(\d{2})\/(\d{2})\/(\d{4})/);
   if (mMatch) month = MNAMES[parseInt(mMatch[2], 10)] + ' ' + mMatch[3];
   const fhM = text.match(/Flight Hours\b[\s\S]*?(\d{2,3}[.,]\d{2})/i) || text.match(/(\d{2,3}[.,]\d{2})\s+Holidays/i);
   if (fhM) fhTotal = fhM[1].replace('.', ':').replace(',', ':');
   const offM = text.match(/Day\s+OFF[\s\S]*?Month[\s\S]*?\b(\d{1,2})\b/i);
   if (offM) offCount = offM[1];
-  const remMatch = text.match(/Remaining\s*(-?\d+)/i);
-  if (remMatch) remaining = remMatch[1];
+  const remMatches = [...text.matchAll(/Remaining\s*(-?\d+)/gi)];
+  if (remMatches.length > 0) remaining = parseInt(remMatches[remMatches.length - 1][1], 10);
 
   const normalized = parseRosterPDF(text);
   for (const e of normalized) {

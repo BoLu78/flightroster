@@ -243,12 +243,6 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
   <button class="sync-btn" onclick="loadRoster()">⟳ Aggiorna</button>
 </div>
 
-<div class="roster-actions">
-  <button class="sync-btn" onclick="triggerRosterImport()">📄 Importa roster PDF</button>
-  <button class="sync-btn" onclick="openCompanyRoster()">🌐 Apri portale Neos</button>
-</div>
-<input type="file" id="rosterPdfInput" accept="application/pdf" style="display:none">
-
 <!-- CAL VIEW -->
 <div class="view active" id="view-cal">
   <div class="cal-header-row">
@@ -275,8 +269,8 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
             style="width:100%;height:60vh;border:1px solid var(--border);border-radius:8px;background:white;"></iframe>
   </div>
   <div class="roster-actions">
-    <button class="sync-btn" onclick="triggerRosterImport()">📄 Importa roster PDF</button>
-    <button class="sync-btn" onclick="openCompanyRoster()">🌐 Apri portale Neos</button>
+    <button class="sync-btn" onclick="importRoster()">📄 Importa roster PDF</button>
+    <button class="sync-btn" onclick="openNeosPortal()">🌐 Apri portale Neos</button>
   </div>
   <input type="file" id="rosterPdfInput" accept="application/pdf" style="display:none">
   <div style="padding:8px 0 12px">
@@ -442,6 +436,14 @@ function openCompanyRoster(){
   window.location.href = 'https://my.neosair.it';
 }
 
+function importRoster(){
+  triggerRosterImport();
+}
+
+function openNeosPortal(){
+  openCompanyRoster();
+}
+
 function getMonthKeyFromLabel(monthStr) {
   const months = {gen:'01',feb:'02',mar:'03',apr:'04',mag:'05',giu:'06',lug:'07',ago:'08',set:'09',ott:'10',nov:'11','dic':'12'};
   if (!monthStr) return new Date().toISOString().substring(0,7);
@@ -550,15 +552,15 @@ function parseNeosRoster(text) {
   const MNAMES = ['', 'Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
   const days = {};
 
-  let fhTotal = '', offCount = '', remaining = '', month = '';
+  let fhTotal = '', offCount = '', remaining = null, month = '';
   const mMatch = text.match(/From\s+(\d{2})\/(\d{2})\/(\d{4})/);
   if (mMatch) month = MNAMES[parseInt(mMatch[2], 10)] + ' ' + mMatch[3];
   const fhM = text.match(/Flight Hours\b[\s\S]*?(\d{2,3}[.,]\d{2})/i) || text.match(/(\d{2,3}[.,]\d{2})\s+Holidays/i);
   if (fhM) fhTotal = fhM[1].replace('.', ':').replace(',', ':');
   const offM = text.match(/Day\s+OFF[\s\S]*?Month[\s\S]*?\b(\d{1,2})\b/i);
   if (offM) offCount = offM[1];
-  const remMatch = text.match(/Remaining\s*(-?\d+)/i);
-  if (remMatch) remaining = remMatch[1];
+  const remMatches = [...text.matchAll(/Remaining\s*(-?\d+)/gi)];
+  if (remMatches.length > 0) remaining = parseInt(remMatches[remMatches.length - 1][1], 10);
 
   const normalized = parseRosterPDF(text);
   for (const e of normalized) {
@@ -622,6 +624,7 @@ async function importPDF(event) {
     }
 
     const result = parseNeosRoster(fullText);
+    console.log("Remaining extracted from PDF:", result.remaining);
     if (result.daysFound === 0) {
       alert('Nessun giorno trovato nel PDF.');
       return;
@@ -635,7 +638,7 @@ async function importPDF(event) {
       month: monthLabel,
       fh: result.fh || existing.fh || '—',
       off: result.off || existing.off || '—',
-      remaining: result.remaining || existing.remaining || '—',
+      remaining: (result.remaining ?? existing.remaining ?? '—'),
       updated: new Date().toLocaleString('it-IT'),
       days: result.days
     };
