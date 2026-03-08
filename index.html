@@ -621,7 +621,8 @@ async function importPDF(event) {
       const page = await pdf.getPage(i);
       const tc = await page.getTextContent();
       const items = tc.items.filter(it => it.str.trim());
-      fullText += items.map(it=>it.str).join(' ') + '\n';
+      const pageText = items.map(it => it.str).join('\n');
+      fullText += '\n' + pageText;
     }
 
     const result = parseNeosRoster(fullText);
