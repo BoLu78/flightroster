@@ -91,6 +91,26 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
 .cday-icon { position:absolute; bottom:4px; right:4px; font-size:11px; }
 .cday.is-overnight-start { border-right:2px solid var(--accent) !important; background:linear-gradient(to right, var(--flight), #dbeafe) !important; }
 .cday.is-overnight-end { border-left:2px solid var(--accent) !important; background:linear-gradient(to left, var(--flight), #dbeafe) !important; }
+.flight-overnight-start{
+border-right:4px solid #2563eb;
+position:relative;
+}
+
+.flight-overnight-start::after{
+content:"▶";
+position:absolute;
+right:-10px;
+top:50%;
+transform:translateY(-50%);
+color:#2563eb;
+font-size:14px;
+}
+
+.flight-overnight-arrival{
+border-left:4px solid #2563eb;
+font-size:12px;
+color:#1e40af;
+}
 /* LIST */
 .view { display:none; padding:0 16px; }
 .view.active { display:block; }
@@ -243,12 +263,6 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
   <button class="sync-btn" onclick="loadRoster()">⟳ Aggiorna</button>
 </div>
 
-<div class="roster-actions">
-  <button class="sync-btn" onclick="triggerRosterImport()">📄 Importa roster PDF</button>
-  <button class="sync-btn" onclick="openCompanyRoster()">🌐 Apri portale Neos</button>
-</div>
-<input type="file" id="rosterPdfInput" accept="application/pdf" style="display:none">
-
 <!-- CAL VIEW -->
 <div class="view active" id="view-cal">
   <div class="cal-header-row">
@@ -275,8 +289,8 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
             style="width:100%;height:60vh;border:1px solid var(--border);border-radius:8px;background:white;"></iframe>
   </div>
   <div class="roster-actions">
-    <button class="sync-btn" onclick="triggerRosterImport()">📄 Importa roster PDF</button>
-    <button class="sync-btn" onclick="openCompanyRoster()">🌐 Apri portale Neos</button>
+    <button class="sync-btn" onclick="importRoster()">📄 Importa roster PDF</button>
+    <button class="sync-btn" onclick="openNeosPortal()">🌐 Apri portale Neos</button>
   </div>
   <input type="file" id="rosterPdfInput" accept="application/pdf" style="display:none">
   <div style="padding:8px 0 12px">
@@ -330,7 +344,7 @@ body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans
 
 <script>
 // ── Variabili globali ──
-const APP_VERSION = '4.0';
+const APP_VERSION = '4.3';
 const CONFIG = {
   BIN_ID: '69a8690d43b1c97be9b354e6',
   PDF_BIN_ID: '69a9c428d0ea881f40f272de',
@@ -442,6 +456,14 @@ function openCompanyRoster(){
   window.location.href = 'https://my.neosair.it';
 }
 
+function importRoster(){
+  triggerRosterImport();
+}
+
+function openNeosPortal(){
+  openCompanyRoster();
+}
+
 function getMonthKeyFromLabel(monthStr) {
   const months = {gen:'01',feb:'02',mar:'03',apr:'04',mag:'05',giu:'06',lug:'07',ago:'08',set:'09',ott:'10',nov:'11','dic':'12'};
   if (!monthStr) return new Date().toISOString().substring(0,7);
@@ -462,64 +484,248 @@ function loadScript(src) {
   });
 }
 
-function parseNeosRoster(text) {
-  const DAY_ABB={su:'dom',mo:'lun',tu:'mar',we:'mer',th:'gio',fr:'ven',sa:'sab'};
-  const MNAMES=['','Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
-  const SKIP=new Set(['DEP','ARR','ETD','ETA','FH','DH','HTL']);
-  let fhTotal='',offCount='',remaining='',month='';
-  const days={};
-  const mMatch=text.match(/From\s+(\d{2})\/(\d{2})\/(\d{4})/);
-  if (mMatch) month=MNAMES[parseInt(mMatch[2],10)]+' '+mMatch[3];
-  const fhM=text.match(/Flight Hours\b[\s\S]*?(\d{2,3}[.,]\d{2})/i)||text.match(/(\d{2,3}[.,]\d{2})\s+Holidays/i);
-  if (fhM) fhTotal=fhM[1].replace('.',':').replace(',',':');
-  const offM=text.match(/Day\s+OFF[\s\S]*?Month[\s\S]*?\b(\d{1,2})\b/i);
-  if (offM) offCount=offM[1];
-  const remMatch = text.match(/Remaining\s*(-?\d+)/i);
-  if (remMatch) remaining = remMatch[1];
-  const targetMonth=mMatch?parseInt(mMatch[2],10):new Date().getMonth()+1;
-  const chunks=text.split(/(?=\b\d{2}\/\d{2}\/\d{4}\s+(?:su|mo|tu|we|th|fr|sa)\b)/);
-  const rawChunks={};
-  for (const chunk of chunks) {
-    const dm=chunk.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(su|mo|tu|we|th|fr|sa)\b\s*([\s\S]*)/i);
-    if (!dm) continue;
-    const day=parseInt(dm[1],10),mo=parseInt(dm[2],10);
-    if (mo!==targetMonth) continue;
-    rawChunks[day]={wd:DAY_ABB[dm[4]]||dm[4],rest:dm[5]||''};
-  }
-  for (let day=1;day<=31;day++) {
-    const rc=rawChunks[day];
-    if (!rc) continue;
-    const {wd,rest}=rc;
-    if (/\bLAYOVER\b/i.test(rest)) { days[day]={type:'layover',wd,htl:true,city:''}; continue; }
-    if (/OFF\(R\)/i.test(rest))     { days[day]={type:'offr',wd}; continue; }
-    if (/\bOFF\b/i.test(rest)&&!/[A-Z]{3}\s+[A-Z>]{3}\s+\d{2}:\d{2}/.test(rest)) { days[day]={type:'off',wd}; continue; }
-    const ckin=(()=>{const c=rest.match(/\.{3,}\s+(\d{2}:\d{2})/);return c?c[1]:'';})();
-    const htl=/\bHTL\b/.test(rest);
-    const flights=extractFlights(rest,SKIP);
-    if (flights.length>0) {
-      const allDH=flights.every(f=>f.dh);
-      days[day]={type:allDH?'dh':'flight',wd,ckin,htl,flights};
-    } else if (ckin) {
-      days[day]={type:'flight',wd,ckin,htl,flights:[]};
+function parseRosterPDF(text) {
+  const DAY_REGEX = /^(\d{2}\/\d{2}\/\d{4})\b\s*(.*)$/;
+  const summaryScope = (() => {
+    const idxs = [text.search(/Flight\s*Hours/i), text.search(/Day\s*OFF\s*Month/i), text.search(/Remaining\s*-?\d+/i)].filter(i => i >= 0);
+    if (idxs.length === 0) return text;
+    return text.slice(Math.min(...idxs));
+  })();
+
+  const remMatch = summaryScope.match(/Remaining\s*(-?\d+)/i);
+  const offMatch = summaryScope.match(/Day\s*OFF\s*Month\s*(\d+)/i);
+  const fhMatch = summaryScope.match(/Flight\s*Hours.*?(\d+\.\d+)/i);
+
+  const result = {
+    duties: [],
+    remaining: remMatch ? parseInt(remMatch[1], 10) : null,
+    offMonth: offMatch ? parseInt(offMatch[1], 10) : null,
+    flightHours: fhMatch ? parseFloat(fhMatch[1]) : null
+  };
+
+  const preparedText = text
+    .replace(/\r/g, '\n')
+    .replace(/(\d{2}\/\d{2}\/\d{4})/g, '\n$1')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{2,}/g, '\n');
+
+  const lines = preparedText.split('\n').map(l => l.trim()).filter(Boolean);
+  const rawDuties = [];
+  let currentDuty = null;
+
+  for (const line of lines) {
+    const dm = line.match(DAY_REGEX);
+    if (dm) {
+      if (currentDuty) rawDuties.push(currentDuty);
+      currentDuty = { date: dm[1], lines: [] };
+      if (dm[2]) currentDuty.lines.push(dm[2].trim());
+    } else if (currentDuty) {
+      if (/^(Day\s*OFF\s*Month|Flight\s*Hours|Remaining\b|LEGENDA|DOCUMENT\s+EXPIRATION|ROUTE\s+EXPIRATION)/i.test(line)) continue;
+      currentDuty.lines.push(line);
     }
   }
-  return {days,daysFound:Object.keys(days).length,month,fh:fhTotal,off:offCount,remaining};
+  if (currentDuty) rawDuties.push(currentDuty);
+
+  const TRANSPORT_RE = /\b(FRECCIA\d+|ITALO\d+|ROMA\s+TERMINI|TERMINI|NAVETTA|TRANSFER|PULLMAN|TRENO)\b/i;
+  const SEGMENT_RE = /([A-Z]{3})\s+([A-Z]{3}|>)\s+(\d{2}:\d{2})\s+(\d{2}:\d{2})/g;
+  const CONTINUATION_RE = /(?:\b(\d{2,4})\b\s+)?([A-Z]{3})\s+>\s+(\d{2}:\d{2})/g;
+
+  result.duties = rawDuties.map(duty => {
+    const detail = duty.lines.join(' ').replace(/\s+/g, ' ').trim();
+    const checkInMatch = detail.match(/\.{3,}\s*(\d{2}:\d{2})/);
+    const checkIn = checkInMatch ? checkInMatch[1] : '';
+    const hotel = /\bHTL\b/i.test(detail);
+
+    const segments = [];
+    let m;
+    while ((m = SEGMENT_RE.exec(detail)) !== null) {
+      const left = detail.slice(0, m.index).trim().split(/\s+/).pop() || '';
+      const fn = /^\d{2,4}$/.test(left) ? left : '';
+      segments.push({
+        flightNumber: fn,
+        departure: m[1],
+        arrival: m[2],
+        etd: m[3],
+        eta: m[4]
+      });
+    }
+
+    while ((m = CONTINUATION_RE.exec(detail)) !== null) {
+      const already = segments.some(s => s.departure === m[2] && s.arrival === '>' && s.etd === m[3]);
+      if (!already) {
+        segments.push({
+          flightNumber: m[1] || '',
+          departure: m[2],
+          arrival: '>',
+          etd: m[3],
+          eta: ''
+        });
+      }
+    }
+
+    let dutyType = 'FLIGHT';
+    if (/\bDH\b/i.test(detail)) dutyType = 'DH';
+    else if (segments.length===0 && (/OFF\(R\)/i.test(detail) || /\bOFF\b/i.test(detail))) dutyType = 'OFF';
+    else if (segments.length===0 && /\bLAYOVER\b/i.test(detail)) dutyType = 'LAYOVER';
+    else if (segments.length===0 && /\bSIM\b/i.test(detail)) dutyType = 'SIM';
+    else if (segments.length===0 && /\bMED(ICAL)?\b/i.test(detail)) dutyType = 'MEDICAL';
+    else if (segments.length===0 && /\b(TRAINING|TRG|COURSE)\b/i.test(detail)) dutyType = 'TRAINING';
+    else if (segments.length===0 && TRANSPORT_RE.test(detail)) dutyType = 'TRANSPORT';
+
+    const continuationArrival = (() => {
+      for (const ln of duty.lines) {
+        const mm = ln.match(/^>\s*([A-Z]{3})\s+(\d{2}:\d{2})$/);
+        if (mm) return { arr: mm[1], eta: mm[2] };
+      }
+      return null;
+    })();
+
+    const first = segments[0] || { flightNumber: '', departure: '', arrival: '', etd: '', eta: '' };
+    return {
+      date: duty.date,
+      dutyType,
+      checkIn,
+      hotel,
+      segments,
+      continuationArrival,
+      departure: first.departure,
+      arrival: first.arrival,
+      etd: first.etd,
+      eta: first.eta,
+      flightNumber: first.flightNumber,
+      remarks: detail
+    };
+  });
+
+  console.log('[parseRosterPDF] duties:', result.duties.length, 'remaining:', result.remaining, 'offMonth:', result.offMonth, 'flightHours:', result.flightHours);
+  return result;
 }
 
-function extractFlights(rest,SKIP) {
-  const flights=[];
-  const segRe=/(?:(NO\d+|AZ\d+|\d{3,4})\s+)?([A-Z]{3})\s+([A-Z]{3}|>)\s+(\d{2}:\d{2})\s*(\d{2}:\d{2})?\s*(\d{2}[.,]\d{2})?/g;
-  let m;
-  while ((m=segRe.exec(rest))!==null) {
-    const fn=m[1]||'',dep=m[2],arr=m[3],etd=m[4],eta=m[5]||'',fh=(m[6]||'').replace('.',':').replace(',',':');
-    if (SKIP.has(dep)||SKIP.has(arr)) continue;
-    const after=rest.substring(m.index+m[0].length,m.index+m[0].length+60);
-    const before=rest.substring(Math.max(0,m.index-10),m.index);
-    const isDH=/\bDH\b/.test(after)||/\bDH\b/.test(before);
-    flights.push({fn,dep,arr:arr==='>'?'···':arr,etd,eta,fh,dh:isDH});
+function parseNeosRoster(text) {
+  const DAY_ABB = { su:'dom', mo:'lun', tu:'mar', we:'mer', th:'gio', fr:'ven', sa:'sab' };
+  const MNAMES = ['', 'Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+  const days = {};
+
+  let fhTotal = '', offCount = '', remaining = null, month = '';
+  const mMatch = text.match(/From\s+(\d{2})\/(\d{2})\/(\d{4})/);
+  if (mMatch) month = MNAMES[parseInt(mMatch[2], 10)] + ' ' + mMatch[3];
+
+  const parsed = parseRosterPDF(text);
+  if (parsed.flightHours !== null && !Number.isNaN(parsed.flightHours)) {
+    fhTotal = String(parsed.flightHours).replace('.', ':');
+  } else {
+    const fhM = text.match(/Flight Hours\b[\s\S]*?(\d{2,3}[.,]\d{2})/i) || text.match(/(\d{2,3}[.,]\d{2})\s+Holidays/i);
+    if (fhM) fhTotal = fhM[1].replace('.', ':').replace(',', ':');
   }
-  return flights;
+
+  if (parsed.offMonth !== null && !Number.isNaN(parsed.offMonth)) {
+    offCount = String(parsed.offMonth);
+  } else {
+    const offM = text.match(/Day\s+OFF[\s\S]*?Month[\s\S]*?\b(\d{1,2})\b/i);
+    if (offM) offCount = offM[1];
+  }
+
+  remaining = parsed.remaining;
+
+  let pendingContinuation = null;
+  for (const duty of parsed.duties) {
+    const dm = duty.date.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (!dm) continue;
+
+    const day = parseInt(dm[1], 10);
+    const monthNum = parseInt(dm[2], 10) - 1;
+    const yearNum = parseInt(dm[3], 10);
+    const jsDate = new Date(yearNum, monthNum, day);
+    const wd = DAY_ABB[['su','mo','tu','we','th','fr','sa'][jsDate.getDay()]] || '';
+
+    if (duty.dutyType === 'OFF') {
+      days[day] = /OFF\(R\)/i.test(duty.remarks) ? { type: 'offr', wd } : { type: 'off', wd };
+      continue;
+    }
+    if (duty.dutyType === 'LAYOVER') {
+      days[day] = { type: 'layover', wd, htl: true, city: '' };
+      continue;
+    }
+
+    if (pendingContinuation && duty.continuationArrival) {
+      const prevDay = pendingContinuation.day;
+      const prevIdx = pendingContinuation.index;
+      const prevFlight = days[prevDay] && days[prevDay].flights ? days[prevDay].flights[prevIdx] : null;
+      if (prevFlight) {
+        prevFlight.arr = duty.continuationArrival.arr;
+        prevFlight.eta = duty.continuationArrival.eta;
+        prevFlight.overnight = true;
+        days[prevDay].overnightStart = true;
+      }
+      days[day] = {
+        type: 'arrival',
+        wd,
+        arrivalOnly: true,
+        overnightArrival: true,
+        flights: [{
+          arr: duty.continuationArrival.arr,
+          eta: duty.continuationArrival.eta,
+          overnight: true
+        }]
+      };
+      pendingContinuation = null;
+      continue;
+    }
+
+    const isDh = duty.dutyType === 'DH';
+    const isOffice = ['TRAINING', 'SIM', 'MEDICAL', 'TRANSPORT'].includes(duty.dutyType);
+    const type = isDh ? 'dh' : (isOffice ? 'ufficio' : 'flight');
+
+    const flights = (duty.segments || []).map(seg => ({
+      fn: seg.flightNumber || '',
+      dep: seg.departure || '',
+      arr: seg.arrival === '>' ? '···' : (seg.arrival || ''),
+      etd: seg.etd || '',
+      eta: seg.eta || '',
+      fh: '',
+      dh: isDh,
+      overnight: false,
+      note: duty.remarks || ''
+    }));
+
+    days[day] = {
+      type,
+      wd,
+      ckin: duty.checkIn || '',
+      htl: !!duty.hotel,
+      flights
+    };
+
+    flights.forEach((f, idx) => {
+      if (f.arr === '···') {
+        pendingContinuation = { day, index: idx };
+      }
+      if (f.etd && f.eta && f.eta < f.etd) {
+        f.overnight = true;
+        days[day].overnightStart = true;
+        const nextDate = new Date(yearNum, monthNum, day + 1);
+        const nextDay = nextDate.getDate();
+        const nextWd = DAY_ABB[['su','mo','tu','we','th','fr','sa'][nextDate.getDay()]] || '';
+        if (!days[nextDay]) {
+          days[nextDay] = {
+            type: 'arrival',
+            wd: nextWd,
+            arrivalOnly: true,
+            overnightArrival: true,
+            flights: [{
+              arr: f.arr === '···' ? '' : f.arr,
+              eta: f.eta || '',
+              overnight: true
+            }]
+          };
+        }
+      }
+    });
+  }
+
+  return { days, daysFound: Object.keys(days).length, month, fh: fhTotal, off: offCount, remaining };
 }
+
 
 async function importPDF(event) {
   const file = event.target.files[0];
@@ -536,10 +742,12 @@ async function importPDF(event) {
       const page = await pdf.getPage(i);
       const tc = await page.getTextContent();
       const items = tc.items.filter(it => it.str.trim());
-      fullText += items.map(it=>it.str).join(' ') + '\n';
+      const pageText = items.map(it => it.str).join('\n');
+      fullText += '\n' + pageText;
     }
 
     const result = parseNeosRoster(fullText);
+    console.log("Remaining extracted from PDF:", result.remaining);
     if (result.daysFound === 0) {
       alert('Nessun giorno trovato nel PDF.');
       return;
@@ -553,7 +761,7 @@ async function importPDF(event) {
       month: monthLabel,
       fh: result.fh || existing.fh || '—',
       off: result.off || existing.off || '—',
-      remaining: result.remaining || existing.remaining || '—',
+      remaining: (result.remaining ?? existing.remaining ?? '—'),
       updated: new Date().toLocaleString('it-IT'),
       days: result.days
     };
@@ -713,15 +921,17 @@ function buildCalendar(days, changedDays) {
     if (d===TODAY) cls += ' is-today';
     if (changedDays && changedDays.includes(d)) cls += ' is-changed';
     const hasOpenEnd = info && info.flights && info.flights.some(f => f.arr==='···');
-    const isCont = info && info.flights && info.flights.some(f => f.cont);
+    const isArrivalOnly = info && info.arrivalOnly;
     if (hasOpenEnd) cls += ' is-overnight-start';
-    if (isCont) cls += ' is-overnight-end';
+    if (isArrivalOnly) cls += ' is-overnight-end';
+    if (info && info.overnightStart) cls += ' flight-overnight-start';
+    if (info && info.overnightArrival) cls += ' flight-overnight-arrival';
     cell.className = cls;
     let route = '';
     if (info && info.flights && info.flights[0]) {
       const f = info.flights[0];
-      if (hasOpenEnd) route = `<div class="cday-route">${f.dep||''}<br><span style="color:var(--accent);font-size:8px">▸${d+1}</span></div>`;
-      else if (isCont) route = `<div class="cday-route"><span style="color:var(--accent);font-size:8px">${d-1}▸</span><br>${f.arr||''}</div>`;
+      if (info.arrivalOnly) route = `<div class="cday-route">ARR ${f.arr||''}<br>${f.eta||''}</div>`;
+      else if (hasOpenEnd) route = `<div class="cday-route">${f.dep||''}<br><span style="color:var(--accent);font-size:8px">▸${d+1}</span></div>`;
       else route = `<div class="cday-route">${f.dep||''}<br>${f.arr||''}</div>`;
     } else if (info && info.type==='layover') {
       route = `<div class="cday-route" style="font-size:9px;color:#1565c0">${info.city||'LAY'}</div>`;
@@ -1006,9 +1216,24 @@ document.getElementById('rosterPdfInput').addEventListener('change', importPDF);
 // Boot
 document.getElementById('appVersionLabel').textContent = `v${APP_VERSION}`;
 
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register(`sw.js?v=${APP_VERSION}`).catch(err => {
-    console.warn('[SW] register failed:', err.message);
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("./sw.js?v=" + APP_VERSION).then(reg => {
+
+    if (reg.waiting) {
+      reg.waiting.postMessage("SKIP_WAITING");
+      window.location.reload();
+    }
+
+    reg.addEventListener("updatefound", () => {
+      const newWorker = reg.installing;
+
+      newWorker.addEventListener("statechange", () => {
+        if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+          window.location.reload();
+        }
+      });
+    });
+
   });
 }
 loadRoster();
