@@ -4,7 +4,8 @@ const FILES = [
   './',
   './index.html',
   './admin.html',
-  './manifest.json'
+  './manifest.json',
+  './sw.js'
 ];
 
 self.addEventListener('install', event => {

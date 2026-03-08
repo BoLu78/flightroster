@@ -1093,6 +1093,7 @@ document.getElementById('appVersionLabel').textContent = `v${APP_VERSION}`;
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./sw.js").then(reg => {
+
     if (reg.waiting) {
       reg.waiting.postMessage("SKIP_WAITING");
       window.location.reload();
@@ -1100,7 +1101,6 @@ if ("serviceWorker" in navigator) {
 
     reg.addEventListener("updatefound", () => {
       const newWorker = reg.installing;
-      if (!newWorker) return;
 
       newWorker.addEventListener("statechange", () => {
         if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
@@ -1108,8 +1108,7 @@ if ("serviceWorker" in navigator) {
         }
       });
     });
-  }).catch(err => {
-    console.warn('[SW] register failed:', err.message);
+
   });
 }
 loadRoster();
