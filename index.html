@@ -520,6 +520,7 @@ function parseRosterPDF(text) {
       currentDuty = { date: dm[1], lines: [] };
       if (dm[2]) currentDuty.lines.push(dm[2].trim());
     } else if (currentDuty) {
+      if (/^(Day\s*OFF\s*Month|Flight\s*Hours|Remaining\b|LEGENDA|DOCUMENT\s+EXPIRATION|ROUTE\s+EXPIRATION)/i.test(line)) continue;
       currentDuty.lines.push(line);
     }
   }
@@ -563,13 +564,13 @@ function parseRosterPDF(text) {
     }
 
     let dutyType = 'FLIGHT';
-    if (/OFF\(R\)/i.test(detail) || /\bOFF\b/i.test(detail)) dutyType = 'OFF';
-    else if (/\bLAYOVER\b/i.test(detail)) dutyType = 'LAYOVER';
-    else if (/\bSIM\b/i.test(detail)) dutyType = 'SIM';
-    else if (/\bMED(ICAL)?\b/i.test(detail)) dutyType = 'MEDICAL';
-    else if (/\b(TRAINING|TRG|COURSE)\b/i.test(detail)) dutyType = 'TRAINING';
-    else if (TRANSPORT_RE.test(detail)) dutyType = 'TRANSPORT';
-    else if (/\bDH\b/i.test(detail)) dutyType = 'DH';
+    if (/\bDH\b/i.test(detail)) dutyType = 'DH';
+    else if (segments.length===0 && (/OFF\(R\)/i.test(detail) || /\bOFF\b/i.test(detail))) dutyType = 'OFF';
+    else if (segments.length===0 && /\bLAYOVER\b/i.test(detail)) dutyType = 'LAYOVER';
+    else if (segments.length===0 && /\bSIM\b/i.test(detail)) dutyType = 'SIM';
+    else if (segments.length===0 && /\bMED(ICAL)?\b/i.test(detail)) dutyType = 'MEDICAL';
+    else if (segments.length===0 && /\b(TRAINING|TRG|COURSE)\b/i.test(detail)) dutyType = 'TRAINING';
+    else if (segments.length===0 && TRANSPORT_RE.test(detail)) dutyType = 'TRANSPORT';
 
     const continuationArrival = (() => {
       for (const ln of duty.lines) {
